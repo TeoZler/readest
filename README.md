@@ -1,3 +1,22 @@
+## Readest Remote fork
+
+**Readest Remote** is an independent community fork that adds authenticated Kavita EPUB
+libraries, API-first cover caching, Range-based reading, per-device offline copies, and
+Kavita-owned reading-progress sync. Version `0.12.1-r1` is based on upstream Readest
+`v0.12.1`; the `rN` suffix identifies Remote-specific revisions on the same upstream base.
+
+The native Windows and Android builds are the primary V1 targets. Web support is
+conditional on the Kavita deployment allowing the browser's CORS, HTTPS/mixed-content,
+certificate, and Range requirements. PDF, comics, audiobooks, annotation/bookmark sync,
+Kavita metadata writes, and fuzzy duplicate merging are outside V1.
+
+Readest Remote is not an official Readest release. It uses the independent application ID
+`io.github.wenhe233.readestremote` and `readest-remote://` deep links, so it can coexist with
+the official app without sharing its database, credentials, cache, or updater. The upstream
+README is preserved below for project history and common reader documentation.
+
+---
+
 <div align="center">
   <a href="https://readest.com?utm_source=github&utm_medium=referral&utm_campaign=readme" target="_blank">
     <img src="https://github.com/readest/readest/blob/main/apps/readest-app/src-tauri/icons/icon.png?raw=true" alt="Readest Logo" width="20%" />

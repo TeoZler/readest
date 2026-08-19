@@ -1,14 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "__MSG_app_name__",
+  "name": "Send to Readest Remote",
   "version": "0.2.1",
-  "description": "__MSG_app_description__",
+  "description": "Save web pages to your Readest Remote library",
   "default_locale": "en",
   "permissions": ["activeTab", "scripting", "storage", "offscreen"],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "__MSG_action_title__",
+    "default_title": "Send to Readest Remote",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png",

@@ -10,7 +10,7 @@ import { useThemeStore } from '@/store/themeStore';
 import { useQuotaStats } from '@/hooks/useQuotaStats';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useUserActions } from '@/hooks/useUserActions';
-import { useAvailablePlans } from '@/hooks/useAvailablePlans';
+import { PURCHASES_ENABLED, useAvailablePlans } from '@/hooks/useAvailablePlans';
 import type { PlanType } from '@/types/quota';
 import { navigateToLibrary } from '@/utils/nav';
 import { eventDispatcher } from '@/utils/event';
@@ -354,17 +354,19 @@ const ProfilePage = () => {
                   </div>
                 ) : (
                   <>
-                    <div className='flex flex-col gap-y-8 sm:px-6'>
-                      <PlansComparison
-                        availablePlans={availablePlans}
-                        userPlan={userProfilePlan}
-                        onSubscribe={
-                          appService.hasIAP && iapAvailable
-                            ? handleIAPSubscribe
-                            : handleStripeSubscribe
-                        }
-                      />
-                    </div>
+                    {PURCHASES_ENABLED && (
+                      <div className='flex flex-col gap-y-8 sm:px-6'>
+                        <PlansComparison
+                          availablePlans={availablePlans}
+                          userPlan={userProfilePlan}
+                          onSubscribe={
+                            appService.hasIAP && iapAvailable
+                              ? handleIAPSubscribe
+                              : handleStripeSubscribe
+                          }
+                        />
+                      </div>
+                    )}
                     <div className='flex flex-col gap-y-8 px-6'>
                       <AccountActions
                         userPlan={userProfilePlan}
@@ -376,6 +378,7 @@ const ProfilePage = () => {
                         onConfirmDeleteAllBooks={handleDeleteAllBooksWithMessage}
                         onRestorePurchase={handleIAPRestorePurchase}
                         onManageSubscription={handleManageSubscription}
+                        purchasesEnabled={PURCHASES_ENABLED}
                         onManageStorage={handleManageStorage}
                         onManageSharedLinks={handleManageSharedLinks}
                         onManageSync={handleManageSync}

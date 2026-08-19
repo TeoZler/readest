@@ -411,7 +411,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             // fall back to the persisted one.
             val hash = mediaId?.substringAfter("$RESUME_MEDIA_ID:", "")?.takeIf { it.isNotEmpty() }
                 ?: lastBookHash ?: return
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("readest://book/$hash?autoplay=tts"))
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("readest-remote://book/$hash?autoplay=tts"))
                 .setPackage(packageName)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             try {

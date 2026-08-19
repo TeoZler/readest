@@ -4,7 +4,7 @@ import Tauri
 import UIKit
 import os
 
-private let keepAliveLog = Logger(subsystem: "com.bilingify.readest", category: "TTSKeepAlive")
+private let keepAliveLog = Logger(subsystem: "io.github.wenhe233.readestremote", category: "TTSKeepAlive")
 
 // MARK: - Command arguments (camelCase, decoded from the Rust models)
 
@@ -983,7 +983,7 @@ class NativeTTSPlugin: Plugin, AVSpeechSynthesizerDelegate {
   // Decoding + scanning runs off the main thread (a few ms per sentence, but
   // it would land mid-playback). Serial, so queue order still follows enqueue
   // order even if the caller ever stops awaiting each chunk in turn.
-  private let playoutAnalysisQueue = DispatchQueue(label: "com.bilingify.readest.tts.playout")
+  private let playoutAnalysisQueue = DispatchQueue(label: "io.github.wenhe233.readestremote.tts.playout")
 
   private var playoutSession = 0
   private var playoutQueue: [PlayoutItem] = []

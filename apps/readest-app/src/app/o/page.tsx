@@ -25,13 +25,13 @@ const detectPlatform = (): Platform => {
   return 'desktop';
 };
 
-const ANDROID_PACKAGE = 'com.bilingify.readest';
+const ANDROID_PACKAGE = 'io.github.wenhe233.readestremote';
 const FALLBACK_TIMEOUT_MS = 1500;
 const DESKTOP_FALLBACK_DELAY_MS = 1000;
 
 const buildIntentUrl = (path: string, fallbackUrl: string) => {
   const cleanPath = path.replace(/^\//, '');
-  return `intent://${cleanPath}#Intent;scheme=readest;package=${ANDROID_PACKAGE};S.browser_fallback_url=${encodeURIComponent(fallbackUrl)};end`;
+  return `intent://${cleanPath}#Intent;scheme=readest-remote;package=${ANDROID_PACKAGE};S.browser_fallback_url=${encodeURIComponent(fallbackUrl)};end`;
 };
 
 const buildWebReaderUrl = (bookHash: string, cfi: string | null): string => {

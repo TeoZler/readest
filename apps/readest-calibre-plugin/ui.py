@@ -22,11 +22,11 @@ def make_client():
 
 
 class ReadestInterfacePlugin(InterfaceAction):
-    name = 'Readest Sync'
+    name = 'Readest Remote Sync'
     action_spec = (
-        'Readest',
+        'Readest Remote',
         None,
-        'Push selected books and metadata to your Readest library',
+        'Push selected books and metadata to your Readest Remote library',
         None,
     )
 
@@ -68,7 +68,7 @@ class ReadestInterfacePlugin(InterfaceAction):
         self.menu.aboutToShow.connect(self.update_menu)
 
         self.qaction.setMenu(self.menu)
-        self.qaction.setIcon(get_icons('images/icon.png', 'Readest Sync'))
+        self.qaction.setIcon(get_icons('images/icon.png', 'Readest Remote Sync'))
         self.qaction.triggered.connect(self.push_selected)
 
     def update_menu(self):

@@ -16,7 +16,7 @@ val tauriProperties = Properties().apply {
 
 android {
     compileSdk = 36
-    namespace = "com.bilingify.readest"
+    namespace = "io.github.wenhe233.readestremote"
     val keystorePropertiesFile = rootProject.file("keystore.properties")
     val keystoreProperties = Properties()
     if (keystorePropertiesFile.exists()) {
@@ -24,25 +24,15 @@ android {
     }
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
-        // Sentry DSN precedence: environment (CI secret / shell export) wins,
-        // else the gitignored .env.local, else .env at the app root (../../../
-        // from this module). Empty => Sentry auto-init no-ops.
-        manifestPlaceholders["sentryDsn"] = System.getenv("SENTRY_DSN")?.takeIf { it.isNotBlank() }
-            ?: listOf("../../../.env.local", "../../../.env")
-                .map { rootProject.file(it) }
-                .filter { it.exists() }
-                .firstNotNullOfOrNull { f ->
-                    f.readLines()
-                        .map { it.trim() }
-                        .firstOrNull { it.startsWith("SENTRY_DSN=") }
-                        ?.substringAfter("=")?.trim()?.trim('"', '\'')?.takeIf { it.isNotEmpty() }
-                }
-            ?: ""
-        applicationId = "com.bilingify.readest"
+        // Remote telemetry is opt-in at build time and never inherits the
+        // upstream Readest Sentry project or dotenv values.
+        manifestPlaceholders["sentryDsn"] =
+            System.getenv("READEST_REMOTE_SENTRY_DSN")?.takeIf { it.isNotBlank() } ?: ""
+        applicationId = "io.github.wenhe233.readestremote"
         minSdk = 26
         targetSdk = 36
-        versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
-        versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+        versionCode = 12001001
+        versionName = "0.12.1-r1"
         val storeFlavor = project.findProperty("storeFlavor")?.toString() ?: "foss"
         missingDimensionStrategy("store", storeFlavor)
     }

@@ -161,10 +161,10 @@ export function useClipUrlIngress() {
       //   - Universal Link (primary):
       //       https://web.readest.com/clip?url=<encoded>
       //   - Custom URL scheme (fallback):
-      //       readest://clip?url=<encoded>
+      //       readest-remote://clip?url=<encoded>
       const isClipUrl =
-        url.startsWith('readest://clip?') ||
-        url.startsWith('readest://clip/') ||
+        url.startsWith('readest-remote://clip?') ||
+        url.startsWith('readest-remote://clip/') ||
         /^https:\/\/web\.readest\.com\/clip(?:[/?].*)?$/i.test(url);
       if (isClipUrl) {
         try {

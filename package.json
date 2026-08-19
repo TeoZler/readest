@@ -1,7 +1,7 @@
 {
   "name": "@readest/monorepo",
   "private": true,
-  "repository": "readest/readest",
+  "repository": "WenHe233/readest-remote",
   "scripts": {
     "test": "pnpm --filter @readest/readest-app test",
     "test:lua": "pnpm --filter @readest/readest-app test:lua",

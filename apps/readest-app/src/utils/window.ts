@@ -4,7 +4,7 @@ import { exit } from '@tauri-apps/plugin-process';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { eventDispatcher } from './event';
 
-const APP_NAME = 'Readest';
+const APP_NAME = 'Readest Remote';
 
 /**
  * The OS window title, e.g. `Readest - The Hobbit`. It is never drawn in the

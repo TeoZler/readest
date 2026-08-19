@@ -82,7 +82,7 @@ const ShareLanding = () => {
     };
   }, [token, _]);
 
-  const appHref = `readest://share/${encodeURIComponent(token)}`;
+  const appHref = `readest-remote://share/${encodeURIComponent(token)}`;
 
   const handleAddToLibrary = async () => {
     if (!token || importing || !appService) return;

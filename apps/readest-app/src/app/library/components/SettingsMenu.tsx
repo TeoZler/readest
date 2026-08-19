@@ -14,6 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useEnv } from '@/context/EnvContext';
 import { useThemeStore } from '@/store/themeStore';
 import { useQuotaStats } from '@/hooks/useQuotaStats';
+import { PURCHASES_ENABLED } from '@/hooks/useAvailablePlans';
 import { useFileSyncStore } from '@/store/fileSyncStore';
 import {
   isReadestCloudEnabled,
@@ -484,11 +485,13 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onPullLibrary, setIsDropdow
         </ul>
       </MenuItem>
       <hr aria-hidden='true' className='border-base-200 my-1' />
-      {user && userProfilePlan === 'free' && (
+      {PURCHASES_ENABLED && user && userProfilePlan === 'free' && (
         <MenuItem label={_('Upgrade to Readest Premium')} onClick={handleUpgrade} />
       )}
-      {isWebAppPlatform() && <MenuItem label={_('Download Readest')} onClick={downloadReadest} />}
-      <MenuItem label={_('About Readest')} onClick={showAboutReadest} />
+      {isWebAppPlatform() && (
+        <MenuItem label={_('Download Readest Remote')} onClick={downloadReadest} />
+      )}
+      <MenuItem label={_('About Readest Remote')} onClick={showAboutReadest} />
     </Menu>
   );
 };

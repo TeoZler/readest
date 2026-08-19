@@ -9,12 +9,12 @@ interface PageFooterProps {
 export const PageFooter: React.FC<PageFooterProps> = ({ tagline }) => (
   <p className='text-base-content/50 mt-6 text-center text-xs'>
     <a
-      href='https://readest.com'
+      href='https://github.com/WenHe233/readest-remote'
       className='hover:text-base-content/80 font-medium transition-colors'
       target='_blank'
       rel='noopener'
     >
-      Readest
+      Readest Remote
     </a>
     <span className='mx-1.5'>·</span>
     <span>{tagline}</span>

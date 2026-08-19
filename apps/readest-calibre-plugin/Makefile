@@ -1,10 +1,10 @@
-NAME = Readest
+NAME = Readest-Remote
 # The app's package.json is the single source of truth for the version, the
 # same one release.yml reads. `version` stamps it into __init__.py, which is
 # what calibre shows in Preferences > Plugins.
-VERSION = $(shell python3 -c "from sync_version import app_version; \
-	print('.'.join(str(p) for p in app_version()))")
-ZIP = dist/$(NAME)-$(VERSION).calibre-plugin.zip
+VERSION = $(shell python3 -c "import json; \
+	print(json.load(open('../readest-app/package.json', encoding='utf-8'))['version'])")
+ZIP = dist/$(NAME)_$(VERSION)_calibre-plugin.zip
 
 FILES = __init__.py api.py config.py dialogs.py oauth.py ui.py wire.py worker.py \
 	plugin-import-name-readest.txt images/icon.png

@@ -3,13 +3,13 @@ __copyright__ = '2026, Bilingify LLC'
 
 from calibre.customize import InterfaceActionBase
 
-PLUGIN_VERSION = (0, 11, 20)
+PLUGIN_VERSION = (0, 12, 1, 1)
 
 
 class ReadestPlugin(InterfaceActionBase):
-    name = 'Readest Sync'
+    name = 'Readest Remote Sync'
     description = (
-        'Push selected books and their metadata into your Readest cloud library. '
+        'Push selected books and their metadata into your Readest Remote cloud library. '
         'Re-pushing a book updates its existing entry instead of creating a duplicate.'
     )
     supported_platforms = ['windows', 'osx', 'linux']

@@ -172,7 +172,7 @@
             "start",
             "",
             {
-              "validator": "^.*Readest(.*)\\.exe$"
+              "validator": "^.*(?:Readest[- ]Remote|readest-remote)(.*)\\.exe$"
             }
           ]
         },
@@ -182,7 +182,7 @@
           "args": [
             "+x",
             {
-              "validator": "^.*Readest(.*)\\.AppImage$"
+              "validator": "^.*Readest[- ]Remote(.*)\\.AppImage$"
             }
           ]
         },
@@ -191,7 +191,7 @@
           "cmd": "setsid",
           "args": [
             {
-              "validator": "^.*Readest(.*)\\.AppImage$"
+              "validator": "^.*Readest[- ]Remote(.*)\\.AppImage$"
             }
           ]
         }

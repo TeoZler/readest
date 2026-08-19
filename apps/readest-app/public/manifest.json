@@ -1,10 +1,11 @@
 {
-  "name": "Readest",
-  "short_name": "Readest",
+  "id": "readest-remote",
+  "name": "Readest Remote",
+  "short_name": "Readest Remote",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "description": "Readest is an open-source eBook reader supporting EPUB, PDF, and sync across devices.",
+  "description": "Readest Remote is an open-source eBook reader with Kavita integration.",
   "icons": [
     {
       "src": "/icon.png",

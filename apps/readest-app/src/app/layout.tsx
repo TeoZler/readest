@@ -7,10 +7,10 @@ import Providers from '@/components/Providers';
 
 import '../styles/globals.css';
 
-const url = 'https://web.readest.com/';
-const title = 'Readest — Where You Read, Digest and Get Insight';
+const url = 'https://github.com/WenHe233/readest-remote';
+const title = 'Readest Remote — Read your Kavita library anywhere';
 const description =
-  'Discover Readest, the ultimate online ebook reader for immersive and organized reading. ' +
+  'Discover Readest Remote, an ebook reader with secure Kavita integration. ' +
   'Enjoy seamless access to your digital library, powerful tools for highlighting, bookmarking, ' +
   'and note-taking, and support for multiple book views. ' +
   'Perfect for deep reading, analysis, and understanding. Explore now!';
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(url),
   title: {
     default: title,
-    template: '%s | Readest',
+    template: '%s | Readest Remote',
   },
   description,
   generator: 'Next.js',
@@ -28,8 +28,8 @@ export const metadata: Metadata = {
   keywords: ['epub', 'pdf', 'ebook', 'reader', 'readest', 'pwa'],
   authors: [
     {
-      name: 'readest',
-      url: 'https://github.com/readest/readest',
+      name: 'Readest Remote',
+      url: 'https://github.com/WenHe233/readest-remote',
     },
   ],
   icons: {
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: 'Readest',
+    title: 'Readest Remote',
     statusBarStyle: 'default',
   },
   openGraph: {
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
   },
   other: {
     'apple-mobile-web-app-capable': 'yes',
-    'twitter:domain': 'web.readest.com',
+    'twitter:domain': 'github.com',
     'twitter:url': url,
   },
 };

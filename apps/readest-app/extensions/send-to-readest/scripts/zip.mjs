@@ -7,12 +7,12 @@
  * dashboard expects — and drops the `.LICENSE.txt` banners webpack emits
  * plus macOS `.DS_Store` noise.
  *
- * Requires the `zip` CLI (present on macOS / Linux). This is a maintainer
- * packaging step, not part of the CI build.
+ * Uses the extension's existing zip.js dependency so the same packaging step
+ * works on Windows, macOS, and Linux release runners.
  */
-import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, rmSync, statSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { ZipWriter, Uint8ArrayReader, Uint8ArrayWriter, configure } from '@zip.js/zip.js';
+import { existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -24,16 +24,34 @@ if (!existsSync(MANIFEST)) {
   process.exit(1);
 }
 
-const { version } = JSON.parse(readFileSync(MANIFEST, 'utf8'));
-const out = join(ROOT, `send-to-readest-${version}.zip`);
+const appPackage = join(ROOT, '..', '..', 'package.json');
+const { version: releaseVersion } = JSON.parse(readFileSync(appPackage, 'utf8'));
+const out = join(ROOT, `Readest-Remote_${releaseVersion}_browser-extension.zip`);
 if (existsSync(out)) rmSync(out);
 
-// Zip the *contents* of dist/ (cwd: DIST) so manifest.json lands at the
-// archive root rather than under a `dist/` prefix.
-execFileSync('zip', ['-rq', out, '.', '-x', '*.DS_Store', '*.LICENSE.txt'], {
-  cwd: DIST,
-  stdio: 'inherit',
-});
+const files = [];
+const collect = (dir) => {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) collect(path);
+    else if (entry.name !== '.DS_Store' && !entry.name.endsWith('.LICENSE.txt')) files.push(path);
+  }
+};
+collect(DIST);
+files.sort((a, b) => a.localeCompare(b));
+
+configure({ useWebWorkers: false });
+const writer = new ZipWriter(new Uint8ArrayWriter());
+for (const path of files) {
+  // Use POSIX separators and a fixed timestamp for reproducible archives.
+  const name = relative(DIST, path).split(sep).join('/');
+  await writer.add(name, new Uint8ArrayReader(readFileSync(path)), {
+    lastModDate: new Date('2000-01-01T00:00:00.000Z'),
+  });
+}
+writeFileSync(out, await writer.close());
 
 const kb = Math.round(statSync(out).size / 1024);
-console.log(`[zip] send-to-readest-${version}.zip (${kb} KB) ready to upload`);
+console.log(
+  `[zip] Readest-Remote_${releaseVersion}_browser-extension.zip (${kb} KB) ready to upload`,
+);

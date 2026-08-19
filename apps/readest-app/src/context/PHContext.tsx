@@ -19,14 +19,18 @@ const shouldOptOutAtBoot = () => {
   return localStorage.getItem(TELEMETRY_OPT_OUT_KEY) !== 'false';
 };
 
-const posthogUrl =
-  process.env['NEXT_PUBLIC_POSTHOG_HOST'] ||
-  atob(process.env['NEXT_PUBLIC_DEFAULT_POSTHOG_URL_BASE64']!);
-const posthogKey =
-  process.env['NEXT_PUBLIC_POSTHOG_KEY'] ||
-  atob(process.env['NEXT_PUBLIC_DEFAULT_POSTHOG_KEY_BASE64']!);
+// Readest Remote never falls back to Readest's embedded analytics project.
+// Telemetry can only be enabled by a future Remote-owned build that provides
+// both values explicitly.
+const posthogUrl = process.env['NEXT_PUBLIC_REMOTE_POSTHOG_HOST'];
+const posthogKey = process.env['NEXT_PUBLIC_REMOTE_POSTHOG_KEY'];
 
-if (typeof window !== 'undefined' && process.env['NODE_ENV'] === 'production' && posthogKey) {
+if (
+  typeof window !== 'undefined' &&
+  process.env['NODE_ENV'] === 'production' &&
+  posthogKey &&
+  posthogUrl
+) {
   posthog.init(posthogKey, {
     api_host: posthogUrl,
     person_profiles: 'always',

@@ -13,11 +13,10 @@ local SyncAuth = require("readest_syncauth")
 local SyncConfig = require("readest_syncconfig")
 local SyncAnnotations = require("readest_syncannotations")
 local SyncStats = require("readest_syncstats")
-local SelfUpdate = require("readest_selfupdate")
 
 local ReadestSync = WidgetContainer:new{
     name = "readest",
-    title = _("Readest"),
+    title = _("Readest Remote"),
     settings = nil,
 }
 
@@ -473,7 +472,7 @@ end
 function ReadestSync:addToMainMenu(menu_items)
     menu_items.readest_sync = {
         sorting_hint = "tools",
-        text = _("Readest"),
+        text = _("Readest Remote"),
         sub_item_table = {
             {
                 text_func = function()
@@ -611,17 +610,6 @@ function ReadestSync:addToMainMenu(menu_items)
                     self:showSyncInfo()
                 end,
                 separator = true,
-            },
-            {
-                text_func = function()
-                    if self.installed_version then
-                        return T(_("Check for update (v%1)"), self.installed_version)
-                    end
-                    return _("Check for update")
-                end,
-                callback = function()
-                    SelfUpdate:checkForUpdate(self.path, self.installed_version)
-                end,
             },
         }
     }

@@ -252,3 +252,57 @@ Targeted implementation checks on 2026-08-19:
 The former Range-extraction Android measurements are historical evidence, not
 acceptance evidence for D-003. Fresh Android and Windows performance/runtime
 measurements remain mandatory before release.
+
+## Readest Remote release identity
+
+The distribution identity is now `Readest Remote` `0.12.1-r1`, with executable
+`readest-remote`, application identifier `io.github.wenhe233.readestremote`,
+and custom schemes `readest-remote://` and `readest-remote-onedrive://`.
+Internal workspace package names, the `Readest` Cargo crate, database and sync
+protocols, and `/Readest/...` storage layout remain unchanged.
+
+Identity evidence on 2026-08-19:
+
+- The Android x86_64 APK built and its binary manifest reports package
+  `io.github.wenhe233.readestremote`, version name `0.12.1-r1`, version code
+  `12001001`, label `Readest Remote`, no Billing permission, no upstream App
+  Link, and only the new Remote custom schemes.
+- The API 36 emulator has both `com.bilingify.readest` and
+  `io.github.wenhe233.readestremote` installed. Android resolves `readest://`
+  only to the official package and `readest-remote://` only to Remote. Their
+  data directories are distinct, and Remote cold-started with an empty library
+  instead of inheriting the official test library.
+- The Windows x64 release and NSIS bundle built successfully. PE version
+  resources report `Readest Remote` and `0.12.1-r1`, and the native binary is
+  `readest-remote.exe`.
+- The Web production build passed. Full Vitest regression passed `720` files
+  and `9028` assertions, with `4` files and `16` assertions skipped. TypeScript
+  and Biome lint passed (`2038` files); `cargo fmt -p Readest -- --check` and
+  all `85` Readest crate unit tests passed.
+- Calibre regression passed `113` tests and maps the Remote revision to
+  `PLUGIN_VERSION = (0, 12, 1, 1)`. The browser extension built and produced a
+  reproducible, system-zip-independent
+  `Readest-Remote_0.12.1-r1_browser-extension.zip` whose manifest displays
+  `Send to Readest Remote`.
+- Apple main app, Share Extension, Widget, App Group, Keychain service and
+  iCloud container use the new identifier family. The upstream development
+  team, App Link entitlement, and purchase entitlement are absent. Apple
+  compilation remains a CI/macOS gate.
+- The upstream update endpoints and public key are absent, the updater plugin
+  is not registered, purchase UI is disabled, and telemetry initializes only
+  from explicitly supplied Remote-owned environment variables.
+
+Remaining hard gates before the release tag:
+
+- Repeat the API-first cover benchmark on a freshly connected Readest Remote
+  Android install and on Windows. The earlier Range-only results do not count.
+- Install the official Windows stable build beside the Remote NSIS build and
+  verify install directory, uninstall entry, file association, data directory,
+  and protocol isolation.
+- Run the KOReader syntax/tests in CI or another environment with LuaJIT; the
+  Windows host has no LuaJIT and the local scripts therefore reported a skip.
+- Run Apple, Linux ARM64/x64, Windows ARM64, Android release-signing and iOS
+  unsigned-IPA jobs in the no-Release Actions matrix.
+- The repository-wide rustfmt command still fails on pre-existing CRLF and two
+  untouched plugin formatting differences. The scoped Readest crate check is
+  clean; no bulk upstream formatting rewrite will be made for this fork.

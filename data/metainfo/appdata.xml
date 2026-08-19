@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.bilingify.readest</id>
+  <id>io.github.wenhe233.readestremote</id>
 
-  <name>Readest</name>
-  <summary>Modern, feature-rich ebook reader</summary>
+  <name>Readest Remote</name>
+  <summary>Modern ebook reader with Kavita integration</summary>
 
   <description>
-    <p>Readest is a modern, feature-rich ebook reader designed for avid readers offering seamless cross-platform access, powerful tools, and an intuitive interface to elevate your reading experience.</p>
+    <p>Readest Remote is a Readest fork with authenticated Kavita library, streaming, offline reading, and progress integration.</p>
     <p>Built as a modern rewrite of Foliate, Readest leverages Next.js 15 and Tauri v2 to deliver a smooth, cross-platform experience across macOS, Windows, Linux, Android, iOS, and the Web.</p>
     <p>Whether you're analyzing complex texts, immersing yourself in stories, or exploring new ideas, Readest adapts to your needs with powerful features for deep, thoughtful reading.</p>
     <p>Key features include:</p>
@@ -51,13 +51,11 @@
     <keyword>sync</keyword>
   </keywords>
 
-  <url type="homepage">https://github.com/readest/readest</url>
-  <url type="bugtracker">https://github.com/readest/readest/issues</url>
-  <url type="help">https://github.com/readest/readest/wiki</url>
-  <url type="donation">https://github.com/sponsors/readest</url>
-  <url type="vcs-browser">https://github.com/readest/readest</url>
+  <url type="homepage">https://github.com/WenHe233/readest-remote</url>
+  <url type="bugtracker">https://github.com/WenHe233/readest-remote/issues</url>
+  <url type="vcs-browser">https://github.com/WenHe233/readest-remote</url>
 
-  <launchable type="desktop-id">com.bilingify.readest.desktop</launchable>
+  <launchable type="desktop-id">io.github.wenhe233.readestremote.desktop</launchable>
 
   <requires>
     <display_length compare="ge">360</display_length>
@@ -70,6 +68,14 @@
   </supports>
 
   <releases>
+    <release version="0.12.1-r1" date="2026-08-19">
+      <description>
+        <ul>
+          <li>Adds authenticated Kavita EPUB libraries, API-first cover caching, offline reading, and progress sync.</li>
+          <li>Establishes an independent Readest Remote installation identity.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.12.1" date="2026-08-08">
       <description>
         <ul>

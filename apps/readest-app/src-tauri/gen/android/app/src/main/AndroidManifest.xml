@@ -5,7 +5,6 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
-    <uses-permission android:name="com.android.vending.BILLING" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
@@ -112,7 +111,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="readest" android:host="auth-callback" />
+                <data android:scheme="readest-remote" android:host="auth-callback" />
             </intent-filter>
 
             <!-- Google Drive OAuth reverse-DNS redirect (iOS-type client). Mirrors
@@ -132,7 +131,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="readest-onedrive" android:host="auth" />
+                <data android:scheme="readest-remote-onedrive" android:host="auth" />
             </intent-filter>
 
             <intent-filter>
@@ -142,26 +141,13 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
             <!-- DEEP LINK PLUGIN. AUTO-GENERATED. DO NOT REMOVE. -->
-            <intent-filter android:autoVerify="true" >
-                <action android:name="android.intent.action.VIEW" />
-                <!-- ChromeOS ARC++ uses a different action for deep links -->
-                <action android:name="org.chromium.arc.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" />
-                <data android:host="web.readest.com" />
-                
-                
-                
-                
-            </intent-filter>
             <intent-filter >
                 <action android:name="android.intent.action.VIEW" />
                 <!-- ChromeOS ARC++ uses a different action for deep links -->
                 <action android:name="org.chromium.arc.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="readest" />
+                <data android:scheme="readest-remote" />
                 
                 
                 
@@ -174,7 +160,7 @@
                 <action android:name="org.chromium.arc.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="readest-onedrive" />
+                <data android:scheme="readest-remote-onedrive" />
                 
                 
                 

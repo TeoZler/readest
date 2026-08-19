@@ -13,6 +13,11 @@ const IAP_PRODUCT_IDS = [
   'com.bilingify.readest.storage.10gb.purchase',
 ];
 
+// Readest Remote has no Apple/Google store application and does not use the
+// upstream Stripe storefront. Keep the integration code for upstream merges,
+// but make its release-level policy explicit and testable.
+export const PURCHASES_ENABLED = false;
+
 interface UseAvailablePlansParams {
   hasIAP: boolean;
   onError?: (message: string) => void;
@@ -25,6 +30,14 @@ export const useAvailablePlans = ({ hasIAP, onError }: UseAvailablePlansParams) 
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    if (!PURCHASES_ENABLED) {
+      setAvailablePlans([]);
+      setIapAvailable(false);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     const fetchPlans = async () => {
       setLoading(true);
       setError(null);
