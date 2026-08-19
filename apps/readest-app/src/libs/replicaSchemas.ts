@@ -70,6 +70,19 @@ const opdsCatalogFieldsSchema = z
   })
   .catchall(fieldEnvelopeWithCipher);
 
+const kavitaConnectionFieldsSchema = z
+  .object({
+    serverId: fieldEnvelopeWithCipher.optional(),
+    name: fieldEnvelopeSchema.optional(),
+    defaultBaseUrl: fieldEnvelopeSchema.optional(),
+    selectedLibraryIds: fieldEnvelopeSchema.optional(),
+    progressStrategy: fieldEnvelopeSchema.optional(),
+    createdAt: fieldEnvelopeSchema.optional(),
+    updatedAt: fieldEnvelopeSchema.optional(),
+    authKey: fieldEnvelopeWithCipher.optional(),
+  })
+  .catchall(fieldEnvelopeWithCipher);
+
 // Open-shaped: the bundled `settings` row stores arbitrary scalar
 // preferences keyed by `<setting>` or `<group>.<id>` (for flat-map
 // settings like providerEnabled.<id>, syncCategories.<id>,
@@ -113,6 +126,13 @@ export const KIND_ALLOWLIST: Record<string, KindSpec> = {
     maxSchemaVersion: 1,
     maxRowsPerUser: 50,
     fields: opdsCatalogFieldsSchema,
+    binary: false,
+  },
+  kavita_connection: {
+    minSchemaVersion: 1,
+    maxSchemaVersion: 1,
+    maxRowsPerUser: 50,
+    fields: kavitaConnectionFieldsSchema,
     binary: false,
   },
   settings: {

@@ -254,6 +254,7 @@ describe('services/constants', () => {
         font: true,
         texture: true,
         opds_catalog: true,
+        kavita_connection: true,
         settings: true,
       });
     });

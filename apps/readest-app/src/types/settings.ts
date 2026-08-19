@@ -311,6 +311,7 @@ export type SyncCategory =
   | 'font'
   | 'texture'
   | 'opds_catalog'
+  | 'kavita_connection'
   | 'settings'
   | 'credentials'
   | 'stats';
@@ -323,6 +324,7 @@ export const SYNC_CATEGORIES: readonly SyncCategory[] = [
   'font',
   'texture',
   'opds_catalog',
+  'kavita_connection',
   'settings',
   'stats',
   'credentials',

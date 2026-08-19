@@ -1,0 +1,7 @@
+export const KAVITA_MIN_VERSION = '0.9.0.2';
+export const KAVITA_RANGE_CHUNK_SIZE = 128 * 1024;
+export const KAVITA_DEFAULT_DESKTOP_CACHE_BYTES = 1024 * 1024 * 1024;
+export const KAVITA_DEFAULT_MOBILE_CACHE_BYTES = 256 * 1024 * 1024;
+export const KAVITA_DEFAULT_WEB_CACHE_BYTES = 256 * 1024 * 1024;
+export const KAVITA_COVER_QUERY_PLACEHOLDER = 'readest-header-auth';
+export const KAVITA_API_KEY_HEADER = 'x-api-key';

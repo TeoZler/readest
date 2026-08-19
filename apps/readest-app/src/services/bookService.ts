@@ -44,6 +44,7 @@ import {
   resolveBookContentSource,
   type BookFileContentSource,
 } from './bookContent';
+import { openKavitaBookFile } from './kavita/content';
 
 export function buildBookLookupIndex(books: Book[], osPlatform?: OsPlatform): BookLookupIndex {
   const byHash = new Map<string, Book>();
@@ -764,6 +765,7 @@ export async function isBookAvailable(fs: FileSystem, book: Book): Promise<boole
 
 export async function getBookFileSize(fs: FileSystem, book: Book): Promise<number | null> {
   const source = await resolveBookContentSource(fs, book);
+  if (source.kind === 'kavita') return source.source.fileBytes;
   if (source.kind !== 'managed' && source.kind !== 'external') {
     return null;
   }
@@ -791,6 +793,10 @@ async function openBookFileContent(
 }
 
 export async function loadBookContent(fs: FileSystem, book: Book): Promise<BookContent> {
+  const source = await resolveBookContentSource(fs, book);
+  if (source.kind === 'kavita') {
+    return { book, file: await openKavitaBookFile(book) };
+  }
   const { file } = await openBookFileContent(fs, book);
   return { book, file };
 }

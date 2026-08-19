@@ -12,6 +12,7 @@ export type BookContentSource =
   | { kind: 'url'; path: string; base: 'None' }
   | { kind: 'stream'; path: string; base: 'None'; scheme: 'pse' }
   | { kind: 'feed'; path: string; base: 'None' }
+  | { kind: 'kavita'; source: NonNullable<Book['kavitaSource']> }
   | { kind: 'missing' };
 
 export type BookFileContentSource = Extract<
@@ -65,6 +66,10 @@ export async function resolveBookContentSource(
     if (await fs.exists(book.filePath, 'None')) {
       return { kind: 'external', path: book.filePath, base: 'None' };
     }
+  }
+
+  if (book.kavitaSource) {
+    return { kind: 'kavita', source: book.kavitaSource };
   }
 
   if (book.url) {

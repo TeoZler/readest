@@ -52,6 +52,10 @@ const useCategoryCopy = (): Record<SyncCategory, CategoryCopy> => {
       title: _('OPDS catalogs'),
       description: _('Saved catalog URLs and (encrypted) credentials'),
     },
+    kavita_connection: {
+      title: _('Kavita servers'),
+      description: _('Server URLs, selected libraries, and optionally encrypted Auth Keys'),
+    },
     settings: {
       // Dictionary preferences ride this row too, but they're gated by the
       // Dictionaries toggle above, so they're deliberately not listed here.
@@ -61,7 +65,7 @@ const useCategoryCopy = (): Record<SyncCategory, CategoryCopy> => {
     credentials: {
       title: _('Credentials'),
       description: _(
-        'Tokens, usernames, and passwords for OPDS, KOReader, Hardcover, Readwise, and WebDAV. When disabled, credentials remain on this device only and are never uploaded.',
+        'Tokens, Auth Keys, usernames, and passwords for Kavita, OPDS, KOReader, Hardcover, Readwise, and WebDAV. When disabled, credentials remain on this device only and are never uploaded.',
       ),
     },
     stats: {

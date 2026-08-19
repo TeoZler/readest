@@ -224,7 +224,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
   // 10s; module-scoped dedup means a later navigation to the reader
   // won't re-pull the same kind.
   useReplicaPull({
-    kinds: ['dictionary', 'font', 'texture', 'opds_catalog', 'settings'],
+    kinds: ['dictionary', 'font', 'texture', 'opds_catalog', 'kavita_connection', 'settings'],
   });
   // Hydrate the custom-font store from persisted settings so the Font
   // panel sees imported fonts even when opened straight from the

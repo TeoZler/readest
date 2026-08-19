@@ -46,12 +46,19 @@ describe('bootstrapReplicaAdapters', () => {
   test('is idempotent: calling twice is a no-op (does not throw)', () => {
     bootstrapReplicaAdapters();
     bootstrapReplicaAdapters();
-    expect(listReplicaAdapters()).toHaveLength(5);
+    expect(listReplicaAdapters()).toHaveLength(6);
   });
 
-  test('registers the current allowlist (dictionary, font, texture, opds_catalog, settings)', () => {
+  test('registers the current allowlist including Kavita connections', () => {
     bootstrapReplicaAdapters();
     const kinds = listReplicaAdapters().map((a) => a.kind);
-    expect(kinds).toEqual(['dictionary', 'font', 'texture', 'opds_catalog', 'settings']);
+    expect(kinds).toEqual([
+      'dictionary',
+      'font',
+      'texture',
+      'opds_catalog',
+      'settings',
+      'kavita_connection',
+    ]);
   });
 });

@@ -1,6 +1,25 @@
 import { FileHandle, open, BaseDirectory, SeekMode } from '@tauri-apps/plugin-fs';
 import { getOSPlatform } from './misc';
 
+export type RemoteFileFetch = (input: string, init?: RequestInit) => Promise<Response>;
+
+export interface RemoteFileRangeCache {
+  get(start: number, end: number): Promise<ArrayBuffer | undefined>;
+  put(start: number, end: number, value: ArrayBuffer): Promise<void>;
+}
+
+export interface RemoteFileOptions {
+  fetch?: RemoteFileFetch;
+  headers?: HeadersInit;
+  knownSize?: number;
+  strictRange?: boolean;
+  alignChunks?: boolean;
+  chunkSize?: number;
+  retries?: number;
+  signal?: AbortSignal;
+  rangeCache?: RemoteFileRangeCache;
+}
+
 class DeferredBlob extends Blob {
   #dataPromise: Promise<ArrayBuffer>;
   #type: string;
@@ -290,6 +309,14 @@ export class RemoteFile extends File implements ClosableFile {
   #order: number[] = [];
   #cache: Map<number, ArrayBuffer> = new Map(); // LRU cache
   #pendingFetches: Map<string, Promise<ArrayBuffer>> = new Map();
+  #fetch: RemoteFileFetch;
+  #headers: Headers;
+  #strictRange: boolean;
+  #alignChunks: boolean;
+  #chunkSize: number;
+  #retries: number;
+  #signal?: AbortSignal;
+  #rangeCache?: RemoteFileRangeCache;
   // When true, byte ranges are carried in the URL query (?start=&end=) instead
   // of a `Range` header — see fromNativePath().
   #queryRange = false;
@@ -298,13 +325,28 @@ export class RemoteFile extends File implements ClosableFile {
   static MAX_CACHE_ITEMS_SIZE: number = 128;
   static RANGE_SCHEME_ORIGIN = 'http://rangefile.localhost';
 
-  constructor(url: string, name?: string, type = '', lastModified = Date.now()) {
+  constructor(
+    url: string,
+    name?: string,
+    type = '',
+    lastModified = Date.now(),
+    options: RemoteFileOptions = {},
+  ) {
     const basename = url.split('/').pop() || 'remote-file';
     super([], name || basename, { type, lastModified });
     this.url = url;
     this.#name = name || basename;
     this.#type = type;
     this.#lastModified = lastModified;
+    this.#fetch = options.fetch ?? fetch;
+    this.#headers = new Headers(options.headers);
+    this.#strictRange = options.strictRange ?? false;
+    this.#alignChunks = options.alignChunks ?? false;
+    this.#chunkSize = options.chunkSize ?? RemoteFile.MAX_CACHE_CHUNK_SIZE;
+    this.#retries = Math.max(0, options.retries ?? 0);
+    this.#signal = options.signal;
+    this.#rangeCache = options.rangeCache;
+    if (options.knownSize !== undefined) this.#size = options.knownSize;
   }
 
   /**
@@ -344,7 +386,7 @@ export class RemoteFile extends File implements ClosableFile {
   }
 
   async _open_with_head() {
-    const response = await fetch(this.url, { method: 'HEAD' });
+    const response = await this.#request(this.url, { method: 'HEAD' });
     if (!response.ok) {
       throw new Error(`Failed to fetch file size: ${response.status}`);
     }
@@ -354,11 +396,15 @@ export class RemoteFile extends File implements ClosableFile {
   }
 
   async _open_with_range() {
-    const response = await fetch(this.url, { headers: { Range: `bytes=${0}-${1023}` } });
+    const end = this.#size > 0 ? Math.min(1023, this.#size - 1) : 1023;
+    const response = await this.#request(this.url, {
+      headers: this.#rangeHeaders(0, end),
+    });
     if (!response.ok) {
       throw new Error(`Failed to fetch file size: ${response.status}`);
     }
-    this.#size = Number(response.headers.get('content-range')?.split('/')[1]);
+    const total = this.#validateRangeResponse(response, 0, end);
+    this.#size = total;
     this.#type = response.headers.get('content-type') || '';
     return this;
   }
@@ -366,7 +412,7 @@ export class RemoteFile extends File implements ClosableFile {
   async _open_with_query() {
     // No `Range` header — the rangefile handler returns the file size in
     // `X-Total-Size` and the requested bytes as a plain 200 body.
-    const response = await fetch(`${this.url}&start=0&end=0`);
+    const response = await this.#request(`${this.url}&start=0&end=0`);
     if (!response.ok) {
       throw new Error(`Failed to fetch file size: ${response.status}`);
     }
@@ -376,6 +422,7 @@ export class RemoteFile extends File implements ClosableFile {
   }
 
   async open() {
+    if (this.#size >= 0) return this;
     if (this.#queryRange) {
       return this._open_with_query();
     }
@@ -397,16 +444,24 @@ export class RemoteFile extends File implements ClosableFile {
     end = Math.min(this.size - 1, end);
     // console.log(`Fetching range: ${start}-${end}, size: ${end - start + 1}`);
     const response = this.#queryRange
-      ? await fetch(`${this.url}&start=${start}&end=${end}`)
-      : await fetch(this.url, { headers: { Range: `bytes=${start}-${end}` } });
+      ? await this.#request(`${this.url}&start=${start}&end=${end}`)
+      : await this.#request(this.url, { headers: this.#rangeHeaders(start, end) });
     if (!response.ok) {
       throw new Error(`Failed to fetch range: ${response.status}`);
     }
-    return response.arrayBuffer();
+    if (!this.#queryRange) this.#validateRangeResponse(response, start, end);
+    const value = await response.arrayBuffer();
+    if (!this.#queryRange && this.#strictRange && value.byteLength !== end - start + 1) {
+      throw new Error(
+        `Invalid range body length: expected ${end - start + 1}, received ${value.byteLength}`,
+      );
+    }
+    return value;
   }
 
   // inclusive reading of the end: [start, end]
   async fetchRange(start: number, end: number): Promise<ArrayBuffer> {
+    if (this.#alignChunks) return this.#fetchAlignedRange(start, end);
     const rangeSize = end - start + 1;
     const MAX_RANGE_LEN = 1024 * 1000;
 
@@ -454,6 +509,116 @@ export class RemoteFile extends File implements ClosableFile {
         this.#pendingFetches.delete(fetchKey);
       }
     }
+  }
+
+  async #fetchAlignedRange(start: number, end: number): Promise<ArrayBuffer> {
+    start = Math.max(0, start);
+    end = Math.min(this.size - 1, end);
+    if (end < start) return new ArrayBuffer(0);
+
+    const firstChunk = Math.floor(start / this.#chunkSize) * this.#chunkSize;
+    const chunks: Array<{ start: number; end: number; data: ArrayBuffer }> = [];
+    for (let chunkStart = firstChunk; chunkStart <= end; chunkStart += this.#chunkSize) {
+      const chunkEnd = Math.min(this.size - 1, chunkStart + this.#chunkSize - 1);
+      chunks.push({
+        start: chunkStart,
+        end: chunkEnd,
+        data: await this.#getAlignedChunk(chunkStart, chunkEnd),
+      });
+    }
+
+    const output = new Uint8Array(end - start + 1);
+    let outputOffset = 0;
+    for (const chunk of chunks) {
+      const from = Math.max(start, chunk.start);
+      const to = Math.min(end, chunk.end);
+      const sourceOffset = from - chunk.start;
+      const length = to - from + 1;
+      output.set(new Uint8Array(chunk.data, sourceOffset, length), outputOffset);
+      outputOffset += length;
+    }
+    return output.buffer;
+  }
+
+  async #getAlignedChunk(start: number, end: number): Promise<ArrayBuffer> {
+    const memory = this.#cache.get(start);
+    if (memory && memory.byteLength === end - start + 1) {
+      this.#updateAccessOrder(start);
+      return memory;
+    }
+
+    const fetchKey = `${start}-${end}`;
+    const pending = this.#pendingFetches.get(fetchKey);
+    if (pending) return pending;
+
+    const operation = (async () => {
+      const persisted = await this.#rangeCache?.get(start, end);
+      const value = persisted ?? (await this.fetchRangePart(start, end));
+      if (!persisted) await this.#rangeCache?.put(start, end, value.slice(0));
+      this.#cache.set(start, value);
+      this.#updateAccessOrder(start);
+      this.#ensureCacheSize();
+      return value;
+    })();
+    this.#pendingFetches.set(fetchKey, operation);
+    try {
+      return await operation;
+    } finally {
+      this.#pendingFetches.delete(fetchKey);
+    }
+  }
+
+  #rangeHeaders(start: number, end: number): Headers {
+    const headers = new Headers(this.#headers);
+    headers.set('Range', `bytes=${start}-${end}`);
+    return headers;
+  }
+
+  async #request(url: string, init: RequestInit = {}): Promise<Response> {
+    const headers = new Headers(this.#headers);
+    new Headers(init.headers).forEach((value, key) => headers.set(key, value));
+    const requestInit: RequestInit = { ...init, headers, signal: this.#signal ?? init.signal };
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= this.#retries; attempt += 1) {
+      try {
+        const response = await this.#fetch(url, requestInit);
+        if (attempt < this.#retries && [408, 429, 500, 502, 503, 504].includes(response.status)) {
+          continue;
+        }
+        return response;
+      } catch (error) {
+        lastError = error;
+        if (attempt >= this.#retries || this.#signal?.aborted) throw error;
+      }
+    }
+    throw lastError;
+  }
+
+  #validateRangeResponse(response: Response, start: number, end: number): number {
+    const raw = response.headers.get('content-range');
+    const match = raw?.match(/^bytes (\d+)-(\d+)\/(\d+)$/i);
+    if (!match) {
+      if (this.#strictRange) {
+        throw new Error(
+          response.status === 200
+            ? 'Range request returned HTTP 200; refusing a possible full-file response'
+            : 'Range response is missing a valid Content-Range header',
+        );
+      }
+      return Number(raw?.split('/')[1]);
+    }
+    const actualStart = Number(match[1]);
+    const actualEnd = Number(match[2]);
+    const total = Number(match[3]);
+    if (
+      this.#strictRange &&
+      (response.status !== 206 || actualStart !== start || actualEnd !== end || total <= actualEnd)
+    ) {
+      throw new Error(
+        `Invalid range response: expected 206 bytes ${start}-${end}, received ${response.status} ${raw}`,
+      );
+    }
+    return total;
   }
 
   async #fetchAndCacheChunkSafe(

@@ -19,6 +19,12 @@ import { dictionaryAdapter } from '@/services/sync/adapters/dictionary';
 import { fontAdapter } from '@/services/sync/adapters/font';
 import { textureAdapter } from '@/services/sync/adapters/texture';
 import { opdsCatalogAdapter } from '@/services/sync/adapters/opdsCatalog';
+import { kavitaConnectionAdapter } from '@/services/sync/adapters/kavitaConnection';
+import {
+  applyRemoteKavitaConnection,
+  findKavitaConnectionById,
+  softDeleteRemoteKavitaConnection,
+} from '@/services/kavita/connections';
 import { settingsAdapter, type SettingsRemoteRecord } from '@/services/sync/adapters/settings';
 import {
   applyRemoteSettings,
@@ -44,10 +50,17 @@ import type { ImportedDictionary } from '@/services/dictionaries/types';
 import type { CustomFont } from '@/styles/fonts';
 import type { CustomTexture } from '@/styles/textures';
 import type { OPDSCatalog } from '@/types/opds';
+import type { KavitaConnectionReplica } from '@/services/kavita/types';
 import type { Hlc, ReplicaRow } from '@/types/replica';
 import type { SystemSettings } from '@/types/settings';
 
-export type ReplicaKind = 'dictionary' | 'font' | 'texture' | 'opds_catalog' | 'settings';
+export type ReplicaKind =
+  | 'dictionary'
+  | 'font'
+  | 'texture'
+  | 'opds_catalog'
+  | 'kavita_connection'
+  | 'settings';
 
 export interface UseReplicaPullOpts {
   /** Replica kinds this page wants pulled. */
@@ -261,6 +274,14 @@ const opdsCatalogPullConfig: ReplicaPullConfig<OPDSCatalog> = {
   softDeleteByContentId: (id) => useCustomOPDSStore.getState().softDeleteByContentId(id),
 };
 
+const kavitaConnectionPullConfig: ReplicaPullConfig<KavitaConnectionReplica> = {
+  kind: 'kavita_connection',
+  adapter: kavitaConnectionAdapter,
+  findByContentId: findKavitaConnectionById,
+  applyRemote: applyRemoteKavitaConnection,
+  softDeleteByContentId: softDeleteRemoteKavitaConnection,
+};
+
 const settingsPullConfig = (envConfig: EnvConfigType): ReplicaPullConfig<SettingsRemoteRecord> => ({
   kind: 'settings',
   // metadata-only — no baseDir
@@ -356,6 +377,18 @@ const runPullForKind = async (
           service,
           envConfig,
           opdsCatalogPullConfig,
+          pullOpts,
+          pullOverride,
+        ),
+      );
+      return;
+    case 'kavita_connection':
+      await replicaPullAndApply(
+        buildReplicaPullDeps(
+          ctx.manager,
+          service,
+          envConfig,
+          kavitaConnectionPullConfig,
           pullOpts,
           pullOverride,
         ),

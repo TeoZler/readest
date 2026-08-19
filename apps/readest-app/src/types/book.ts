@@ -4,6 +4,7 @@ import { TTSHighlightGranularity } from '@/services/tts/types';
 import { TTSMediaMetadataMode } from '@/services/tts/types';
 import { TTSPlayerStyle } from '@/services/tts/types';
 import type { AnnotationLinkType } from '@/utils/deeplink';
+import type { KavitaBookSource } from '@/services/kavita/types';
 import { AnnotationToolType } from './annotator';
 
 export type BookFormat =
@@ -88,6 +89,9 @@ export interface Book {
   url?: string;
   // if Book is a transient local book we can load the book content via filePath
   filePath?: string;
+  // Device-independent Kavita identity and file metadata. Credentials and
+  // device-specific URL/cache settings are intentionally stored elsewhere.
+  kavitaSource?: KavitaBookSource;
   // Other on-disk paths that resolved to this same book — a watched folder
   // holding the same file twice under different names, or a copy left behind
   // after a rename. Only `filePath` is ever read from; these are remembered so
