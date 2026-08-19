@@ -173,6 +173,7 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
       const settings = useSettingsStore.getState().settings;
       eventDispatcher.dispatch('sync-book-progress', { bookKey });
       eventDispatcher.dispatch('flush-kosync', { bookKey });
+      eventDispatcher.dispatch('flush-kavita', { bookKey });
       await saveConfig(envConfig, bookKey, config, settings);
     }
   };

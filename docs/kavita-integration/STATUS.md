@@ -21,7 +21,7 @@ test infrastructure must never be added to this repository.
 | Phase 1 — API and range proof | Complete | Non-admin Auth Key authentication, supported version, Library access, exact `206` Range, and original-file proof passed |
 | Phase 2 — connection and shelf sync | Complete | Connection UI, explicit Library selection, staged pagination, source filters, and deletion safety |
 | Phase 3 — reading, cache, offline | Complete | Strict lazy foliate-js open, persistent LRU cache, verified queued offline transfer |
-| Phase 4 — progress and credentials | Pending | Kavita-owned progress, encrypted credentials, conflict handling |
+| Phase 4 — progress and credentials | Complete | Kavita-owned progress, encrypted credentials, conflict handling and offline queue |
 | Phase 5 — platform acceptance | Pending | Web, Windows, and Android runtime gates |
 
 ## Phase 0 verification
@@ -119,3 +119,26 @@ book identity is therefore `md5("kavita:" + serverId + ":" + chapterId)`.
 - Targeted Phase 3 regression passed (`4` test files, `21` assertions), browser
   tests passed (`2` files, `3` assertions), and repository lint/type checking
   passed (`2033` files checked).
+
+## Phase 4 verification
+
+- Kavita books bypass Readest Cloud, KOSync, BookOrbit progress and every file
+  backend progress writer. Their only remote progress owner is the source
+  Kavita connection.
+- The reader pulls on open, writes with a five-second debounce, flushes on
+  background/close, and uses the chapter KOReader hash with a Kavita-compatible
+  `DocFragment[n]` plus overall percentage. Server-level policies support ask,
+  prefer-local and prefer-Kavita behavior.
+- Offline progress is device-local and coalesced per book. Reconnect reads the
+  server timestamp first and drops a stale queued write when another device has
+  newer progress.
+- Real Kavita `GET → PUT → GET` with the non-admin Auth Key returned `200`,
+  applied `DocFragment[2]`, reported positive percentage and timestamp, and the
+  original test position was restored with another `200` PUT.
+- The Readest-owned `serverId` and Auth Key remain encrypted replica fields
+  behind the Credentials toggle. Native storage uses SecretStore; the browser
+  AES-GCM test verifies an unextractable key, 12-byte IV, ciphertext-only
+  IndexedDB record, and warned session-only fallback.
+- Targeted Phase 4 regression passed (`3` files, `11` assertions), the browser
+  credential suite passed (`1` file, `2` assertions), and repository lint/type
+  checking passed (`2033` files checked).

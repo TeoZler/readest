@@ -68,6 +68,7 @@ export const useKOSync = (bookKey: string, provider: KosyncProgressProvider = ko
   const getProgress = useReaderStore((s) => s.getProgress);
   const getView = useReaderStore((s) => s.getView);
   const getBookData = useBookDataStore((s) => s.getBookData);
+  const isKavitaBook = useBookDataStore((s) => !!s.getBookData(bookKey)?.book?.kavitaSource);
   const getConfig = useBookDataStore((s) => s.getConfig);
   const setConfig = useBookDataStore((s) => s.setConfig);
 
@@ -87,6 +88,10 @@ export const useKOSync = (bookKey: string, provider: KosyncProgressProvider = ko
   const progress = useBookProgress(bookKey);
 
   useEffect(() => {
+    if (isKavitaBook) {
+      setKOSyncClient(null);
+      return;
+    }
     const config = provider.selectConfig(settings);
     if (!config) {
       setKOSyncClient(null);
@@ -95,7 +100,7 @@ export const useKOSync = (bookKey: string, provider: KosyncProgressProvider = ko
     const client = new KOSyncClient({ ...config });
     setKOSyncClient(client);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings, provider]);
+  }, [settings, provider, isKavitaBook]);
 
   const generateKOProgress = useCallback(async () => {
     const progress = getProgress(bookKey);

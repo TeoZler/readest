@@ -101,6 +101,7 @@ export const useFileSync = (bookKey: string) => {
   const getConfig = useBookDataStore((s) => s.getConfig);
   const setConfig = useBookDataStore((s) => s.setConfig);
   const getBookData = useBookDataStore((s) => s.getBookData);
+  const isKavitaBook = useBookDataStore((s) => !!s.getBookData(bookKey)?.book?.kavitaSource);
   const saveConfig = useBookDataStore((s) => s.saveConfig);
   // Reactive: triggers the auto-push effect on page turns.
   const progress = useBookProgress(bookKey);
@@ -110,8 +111,8 @@ export const useFileSync = (bookKey: string) => {
   // Readest Cloud's native progress sync is useProgressSync's job, not this
   // hook's, and runs independently.
   const activeKinds = useMemo(
-    () => getActiveFileSyncBackends(settings, userProfilePlan ?? 'free'),
-    [settings, userProfilePlan],
+    () => (isKavitaBook ? [] : getActiveFileSyncBackends(settings, userProfilePlan ?? 'free')),
+    [settings, userProfilePlan, isKavitaBook],
   );
 
   /** Flips true on the first local change after a push, false right before each push. */

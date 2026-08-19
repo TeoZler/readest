@@ -98,6 +98,13 @@ const KavitaForm: React.FC<KavitaFormProps> = ({ onBack, onConnectionsChanged })
         lastDiagnostic: { checkedAt: now, ok: true },
       };
       await repository.save(config, device, authKey.trim());
+      if (repository.credentialWarning) {
+        eventDispatcher.dispatch('toast', {
+          type: 'info',
+          timeout: 8000,
+          message: repository.credentialWarning,
+        });
+      }
       refreshConnections();
       setName('');
       setBaseUrl('');
@@ -246,6 +253,30 @@ const KavitaForm: React.FC<KavitaFormProps> = ({ onBack, onConnectionsChanged })
                     {_('Allow an invalid TLS certificate on this device')}
                   </label>
                 )}
+                <label className='block text-sm'>
+                  <SettingLabel>{_('Progress conflict policy')}</SettingLabel>
+                  <select
+                    className='select select-bordered h-10 w-full'
+                    value={connection.progressStrategy}
+                    onChange={async (event) => {
+                      if (!repository) return;
+                      await repository.save(
+                        {
+                          ...connection,
+                          progressStrategy: event.target
+                            .value as KavitaConnectionConfig['progressStrategy'],
+                          updatedAt: Date.now(),
+                        },
+                        repository.getDeviceConfig(connection.id),
+                      );
+                      refreshConnections();
+                    }}
+                  >
+                    <option value='ask'>{_('Ask when remote progress differs')}</option>
+                    <option value='prefer-local'>{_('Prefer this device')}</option>
+                    <option value='prefer-remote'>{_('Prefer Kavita')}</option>
+                  </select>
+                </label>
                 <div className='flex flex-wrap items-end gap-3'>
                   <label className='flex items-center gap-2 text-sm'>
                     <input

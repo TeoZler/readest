@@ -17,6 +17,8 @@ export interface KavitaConnectionConfig {
 
 export interface KavitaDeviceConnectionConfig {
   connectionId: string;
+  /** Stable only on this device; never included in the connection replica. */
+  progressDeviceId?: string;
   baseUrlOverride?: string;
   allowInvalidTls: boolean;
   cacheEnabled: boolean;
@@ -157,6 +159,14 @@ export interface KavitaKoreaderProgress {
   percentage: number;
   progress: string;
   timestamp: number;
+}
+
+export interface KavitaPendingProgress {
+  connectionId: string;
+  koreaderHash: string;
+  payload: KavitaKoreaderProgress;
+  localUpdatedAt: number;
+  queuedAt: number;
 }
 
 export interface KavitaMappedMetadata {

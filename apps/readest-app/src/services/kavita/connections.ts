@@ -36,6 +36,10 @@ export class KavitaConnectionRepository {
     private readonly credentials: KavitaCredentialStore = createKavitaCredentialStore(),
   ) {}
 
+  get credentialWarning(): string | undefined {
+    return this.credentials.warning;
+  }
+
   list(): KavitaConnectionConfig[] {
     return parseList<KavitaConnectionConfig>(this.storage, CONNECTIONS_KEY);
   }

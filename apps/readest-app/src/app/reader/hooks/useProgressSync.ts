@@ -31,6 +31,7 @@ export const useProgressSync = (bookKey: string) => {
   const getConfig = useBookDataStore((s) => s.getConfig);
   const saveConfig = useBookDataStore((s) => s.saveConfig);
   const getBookData = useBookDataStore((s) => s.getBookData);
+  const isKavitaBook = useBookDataStore((s) => !!s.getBookData(bookKey)?.book?.kavitaSource);
   const getView = useReaderStore((s) => s.getView);
   const getViewSettings = useReaderStore((s) => s.getViewSettings);
   const setViewSettings = useReaderStore((s) => s.setViewSettings);
@@ -61,7 +62,7 @@ export const useProgressSync = (bookKey: string) => {
 
   const pushConfig = async (bookKey: string, config: BookConfig | null) => {
     const book = getBookData(bookKey)?.book;
-    if (!config || !book || !user) return;
+    if (!config || !book || book.kavitaSource || !user) return;
     const bookHash = book.hash;
     const metaHash = book.metaHash;
     const newConfig = { ...config, bookHash, metaHash };
@@ -79,7 +80,7 @@ export const useProgressSync = (bookKey: string) => {
 
   const pullConfig = async (bookKey: string) => {
     const book = getBookData(bookKey)?.book;
-    if (!user || !book) return;
+    if (!user || !book || book.kavitaSource) return;
     const bookHash = bookKey.split('-')[0]!;
     const metaHash = book.metaHash;
     await syncConfigs([], bookHash, metaHash, 'pull');
@@ -93,6 +94,10 @@ export const useProgressSync = (bookKey: string) => {
   // user's auto-push isn't blocked by a server outage. Re-entry while a
   // pull is in flight or a retry timer is pending is a no-op.
   const pullWithRetry = useCallback(async () => {
+    if (isKavitaBook) {
+      configPulled.current = true;
+      return;
+    }
     if (configPulled.current) return;
     if (pullInFlight.current) return;
     if (pullRetryTimer.current !== null) return;
@@ -117,7 +122,7 @@ export const useProgressSync = (bookKey: string) => {
       if (!configPulled.current) pullWithRetry();
     }, delay);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookKey]);
+  }, [bookKey, isKavitaBook]);
 
   const syncConfig = async () => {
     if (!configPulled.current) {
@@ -187,18 +192,18 @@ export const useProgressSync = (bookKey: string) => {
 
   // Push: auto-push progress when progress changes with a debounce
   useEffect(() => {
-    if (!progress?.location || !user) return;
+    if (isKavitaBook || !progress?.location || !user) return;
     handleAutoSync();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [progress?.location]);
+  }, [progress?.location, isKavitaBook]);
 
   // Pull: pull progress once when the book is opened, with retry on failure
   useEffect(() => {
-    if (!progress || hasPulledConfigOnce.current) return;
+    if (isKavitaBook || !progress || hasPulledConfigOnce.current) return;
     hasPulledConfigOnce.current = true;
     pullWithRetry();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [progress]);
+  }, [progress, isKavitaBook]);
 
   // Clean up any pending retry timer on unmount so it doesn't fire after the
   // reader has been torn down.
