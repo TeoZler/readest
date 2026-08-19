@@ -40,9 +40,11 @@ android {
         if (keystorePropertiesFile.exists()) {
             create("signing") {
                 keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["password"] as String
+                keyPassword = (keystoreProperties["keyPassword"]
+                    ?: keystoreProperties["password"]) as String
                 storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["password"] as String
+                storePassword = (keystoreProperties["storePassword"]
+                    ?: keystoreProperties["password"]) as String
             }
         }
     }

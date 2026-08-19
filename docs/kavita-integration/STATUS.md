@@ -292,6 +292,46 @@ Identity evidence on 2026-08-19:
   is not registered, purchase UI is disabled, and telemetry initializes only
   from explicitly supplied Remote-owned environment variables.
 
+## Readest Remote release workflow
+
+The release pipeline now has separate test, platform-build, aggregation and
+publication gates. A manual `workflow_dispatch` builds and uploads the complete
+matrix without creating a GitHub Release. A `v*` tag must exactly match the
+package version and creates the formal Release only after every required job
+and the 16-file artifact manifest succeed.
+
+Release-pipeline evidence on 2026-08-19:
+
+- `actionlint 1.7.12` passed all retained workflows. The workflow pins the
+  validator container by digest and all GitHub Actions by commit.
+- Full TypeScript/Biome lint passed (`2039` files). Full Vitest regression
+  passed `721` files and `9032` assertions, with `4` files and `16` assertions
+  skipped. Four additional release tests reject missing, empty, unexpected or
+  updater artifacts and prevent dispatch runs from publishing a Release.
+- The downloadable Web build completed as a real static export under webpack,
+  with the `Readest Remote` PWA identity and a non-empty `sw.js`. It does not
+  ship browser source maps. The 6 GiB Node heap limit is explicit so this build
+  is not dependent on the runner's default heap size.
+- Windows setup and portable artifacts are distinct builds. The portable pass
+  compiles with `NEXT_PUBLIC_PORTABLE_APP=true`; it is not a renamed copy of
+  the installed-mode binary.
+- Android Gradle tests completed all configured ABI/flavor tasks (`851`
+  actionable, `604` executed). Release signing accepts separate store and key
+  passwords while retaining the old single-password format for local
+  compatibility. CI verifies both APKs against the pinned certificate digest,
+  package ID, version code/name, label and absence of Billing permission.
+- The browser extension rebuilt and produced
+  `Readest-Remote_0.12.1-r1_browser-extension.zip`. Local KOReader packaging is
+  still blocked by the Windows host's missing `zip`/LuaJIT and remains a CI
+  hard gate.
+- Official nightly/updater, R2 upload, Vercel production deployment and legacy
+  `ghcr.io/.../readest` publication workflows were removed. The new release
+  never produces updater signatures or `latest.json`.
+- Aggregation requires the exact Windows x64/ARM64, Linux x64/ARM64, macOS
+  universal, Android universal/ARM64, unsigned iOS ARM64, Web, KOReader,
+  Calibre and browser-extension filenames, then generates and re-verifies
+  `SHA256SUMS.txt` from the assembled directory.
+
 Remaining hard gates before the release tag:
 
 - Repeat the API-first cover benchmark on a freshly connected Readest Remote

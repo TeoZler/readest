@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build a Readest-${version}-1.koplugin.zip locally for sideloading
+ * Build a Readest-Remote_${version}_koreader-plugin.zip for sideloading
  * onto a real KOReader device. Mirrors the same exclusions the CI
  * release workflow uses (.github/workflows/release.yml: "create
  * KOReader plugin zip"):
@@ -51,7 +51,7 @@ function parseArgs(argv) {
   node build-koplugin.js [--version X.Y.Z] [--out PATH] [--keep-meta]
 
 Default version: dev-<git-sha>
-Default out:     ./Readest-<version>-1.koplugin.zip`);
+Default out:     ./Readest-Remote_<version>_koreader-plugin.zip`);
       process.exit(0);
     } else {
       console.error(`Unknown argument: ${a}`);
@@ -94,7 +94,7 @@ function restoreMeta(original) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const version = args.version || `dev-${shortGitSha()}`;
-  const out = path.resolve(args.out || `Readest-${version}-1.koplugin.zip`);
+  const out = path.resolve(args.out || `Readest-Remote_${version}_koreader-plugin.zip`);
 
   if (!which('zip')) {
     console.error('error: `zip` not found on PATH. Install via your package manager.');

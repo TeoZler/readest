@@ -9,24 +9,25 @@ import ShareLanding from './ShareLanding';
 // `generateMetadata` — layout metadata is shared across child pages and
 // can't see the query string.
 //
-// In the Tauri build (output: 'export'), this whole route is dropped because
-// rewrites and dynamic metadata require a server. Tauri intercepts the
-// readest://share/{token} deep link before /s ever loads.
+// In Tauri and downloadable static Web builds (output: 'export'), dynamic
+// metadata is unavailable because it requires a server. The client landing
+// page still reads the token from the query string.
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
-  // The Tauri build runs `output: 'export'`, which forbids `await searchParams`
-  // anywhere in collected page data. `process.env.NEXT_PUBLIC_APP_PLATFORM` is
-  // replaced at build time, so this early return DCEs the rest of the function
-  // out of the Tauri bundle and the route becomes fully static. The web build
-  // keeps the full dynamic implementation below.
-  if (process.env['NEXT_PUBLIC_APP_PLATFORM'] !== 'web') {
+  // Static exports forbid `await searchParams` during page-data collection.
+  // Keep full unfurl metadata in hosted Web builds while giving downloadable
+  // static Web and Tauri packages a deterministic fallback.
+  if (
+    process.env['NEXT_PUBLIC_APP_PLATFORM'] !== 'web' ||
+    process.env['BUILD_STATIC_WEB'] === 'true'
+  ) {
     return {
-      title: 'Open in Readest',
-      description: 'Open-source ebook reader for everyone, on every device.',
+      title: 'Open in Readest Remote',
+      description: 'Readest Remote with Kavita library support.',
     };
   }
 
@@ -36,15 +37,15 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 
   if (!token) {
     return {
-      title: 'Open in Readest',
-      description: 'Open-source ebook reader for everyone, on every device.',
+      title: 'Open in Readest Remote',
+      description: 'Readest Remote with Kavita library support.',
     };
   }
 
   const result = await resolveActiveShare(token);
   if (!result.ok) {
     return {
-      title: 'Share link unavailable · Readest',
+      title: 'Share link unavailable · Readest Remote',
       description: 'This share link is no longer available.',
     };
   }
@@ -53,25 +54,25 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const ogImage = `${READEST_WEB_BASE_URL}/api/share/${token}/og.png`;
 
   return {
-    title: `${share.bookTitle} · Shared via Readest`,
+    title: `${share.bookTitle} · Shared via Readest Remote`,
     description: share.bookAuthor
-      ? `${share.bookAuthor} · Shared via Readest`
-      : 'Shared via Readest',
+      ? `${share.bookAuthor} · Shared via Readest Remote`
+      : 'Shared via Readest Remote',
     openGraph: {
       type: 'book',
       url: shareUrl,
       title: share.bookTitle,
       description: share.bookAuthor
-        ? `${share.bookAuthor} · Shared via Readest`
-        : 'Shared via Readest',
+        ? `${share.bookAuthor} · Shared via Readest Remote`
+        : 'Shared via Readest Remote',
       images: [{ url: ogImage, width: 1200, height: 630 }],
     },
     twitter: {
       card: 'summary_large_image',
       title: share.bookTitle,
       description: share.bookAuthor
-        ? `${share.bookAuthor} · Shared via Readest`
-        : 'Shared via Readest',
+        ? `${share.bookAuthor} · Shared via Readest Remote`
+        : 'Shared via Readest Remote',
       images: [ogImage],
     },
   };

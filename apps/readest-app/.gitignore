@@ -72,9 +72,11 @@ docs/superpowers
 
 # Auto Generated PWA files
 /public/sw.js
+/public/sw.js.map
 /public/workbox-*.js
 /public/fallback-*.js
 /public/swe-worker-*.js
+/public/swe-worker-*.js.map
 
 /dist/
 
