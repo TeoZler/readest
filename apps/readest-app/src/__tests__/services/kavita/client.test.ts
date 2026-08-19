@@ -29,10 +29,7 @@ describe('KavitaClient', () => {
     expect(requests[1]!.url).toContain('/api/Plugin/authenticate');
     expect(requests[1]!.url).toContain('apiKey=top-secret');
 
-    const cover = client.getChapterCoverRequest(7);
-    expect(cover.url).not.toContain('top-secret');
-    expect(cover.url).toContain('apiKey=readest-header-auth');
-    expect(cover.headers.get('x-api-key')).toBe('top-secret');
+    expect(requests.every(({ url }) => !url.includes('/api/Image/'))).toBe(true);
   });
 
   it('parses the required Pagination header', async () => {

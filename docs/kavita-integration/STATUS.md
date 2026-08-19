@@ -147,9 +147,9 @@ book identity is therefore `md5("kavita:" + serverId + ":" + chapterId)`.
 
 ## Phase 5 verification
 
-- Full unit regression passed: `717` files passed, `4` skipped; `9012`
-  assertions passed, `16` skipped. Full browser regression passed: `36` files,
-  `358` assertions passed, `1` skipped. The production Web build also passed.
+- Full unit regression passed: `717` files passed, `4` skipped; `9015`
+  assertions passed, `16` skipped. Full browser regression passed: `37` files,
+  `359` assertions passed, `1` skipped. The production Web build also passed.
 - Browser acceptance covers allowed CORS, preflight rejection, HTTPS mixed
   content, missing Range exposure, a proxy-rewritten `200`, AES-GCM credential
   storage and quota failures. Against the real pinned Kavita server, both the
@@ -177,3 +177,45 @@ book identity is therefore `md5("kavita:" + serverId + ":" + chapterId)`.
   The offline book remained on the shelf and opened again to foliate-js page
   `1 / 307` while the server state stayed `exited`. The server was restored to
   healthy after the test.
+
+## Corrective cover acceptance
+
+The original Phase 5 acceptance missed a user-visible defect: it asserted the
+shape of the chapter-cover request but did not require a real shelf image to
+decode. Android therefore displayed generated text fallbacks for uncached
+Kavita books even though the mocked request test passed.
+
+The real Kavita `v0.9.0.2` contract proved that `/api/Image/chapter-cover`
+requires the Auth Key as its `apiKey` query value. Supplying only the
+`x-api-key` header returned `400`; a harmless query placeholder plus the header
+returned `401`. Putting the real key in a cover URL would violate the locked
+credential boundary, so Readest no longer uses that endpoint.
+
+The corrected shelf path opens the chapter through the same authenticated,
+strict-`206` `RemoteFile` used by foliate-js, extracts `book.getCover()`, and
+persists `cover.png` with a source-version marker. It deduplicates concurrent
+loads, caps extraction concurrency at four, cancels unused work, and starts
+only when a card reaches the viewport or its 50% prefetch margin. A cold-start
+credential unlock is deduplicated so covers do not race SecretStore startup.
+
+Corrective evidence on 2026-08-19:
+
+- A Chromium browser test served a real fixture EPUB through authenticated
+  ranges, decoded the extracted Blob as an image, and asserted positive natural
+  width and height. No request URL contained the test Auth Key and no response
+  represented the complete file.
+- On the Android API 36 emulator, the affected 38-book series page reached
+  `12/12` decoded visible covers. Eight previously missing covers were extracted
+  through 61 observed `206` responses for eight unique chapters; the Kavita
+  image endpoint was called zero times and no other chapter response status was
+  observed. Three rendered cards below the prefetch boundary remained pending
+  until eligible.
+- With Kavita stopped, a force-stop/cold-start loaded every previously persisted
+  cover through `asset.localhost`; there were zero `blob:` network covers. Books
+  whose covers had never been viewed continued to show the deliberate text
+  fallback while offline.
+- Full correction regression passed: lint/type check (`2034` files), unit
+  (`9015` passed, `16` skipped), Chromium browser (`359` passed, `1` skipped),
+  Rust (`89/89`), Windows Tauri WebDriver (`113` passed, `1` skipped), Web
+  production build, Windows release `--no-bundle`, and the final Android x86_64
+  debug build plus runtime inspection.

@@ -66,3 +66,29 @@ Results:
   `122,045 bytes/s`
 - Offline restart: after Kavita was stopped and Readest was force-stopped, the
   book remained `Offline` and reopened to page `1 / 307`
+
+## Android shelf-cover correction — 2026-08-19
+
+The original shelf-cover request test did not decode an image and was replaced
+with EPUB cover extraction over the authenticated strict-Range path.
+
+On the affected 38-book series page, four covers were already persisted and
+eight visible covers were absent. With a four-extraction concurrency limit and
+a 50% viewport prefetch margin:
+
+- the first measured 35-second window issued 24 `206` requests for four unique
+  chapters;
+- the following measured 60-second window issued another 15 `206` requests for
+  four unique chapters;
+- the complete server-log interval contained 61 `206` responses across those
+  eight chapters, zero chapter `200` responses, and zero
+  `/api/Image/chapter-cover` requests;
+- all 12 visible covers decoded by the end of the 95-second observation, with
+  eight newly extracted Blob URLs and four persisted asset URLs;
+- after background cache completion, the eight chapter versions occupied
+  11,678,805 bytes in 93 deduplicated 128 KiB-aligned cache records.
+
+This run overlapped repository build/test load on the Windows host and is a
+correctness/request-volume measurement, not a device-performance target. The
+component test separately proves that an off-screen card makes no extraction
+request until its intersection callback fires.

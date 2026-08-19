@@ -31,6 +31,8 @@ function defaultCacheCapacity(): number {
 }
 
 export class KavitaConnectionRepository {
+  private readonly unlocks = new Map<string, Promise<boolean>>();
+
   constructor(
     private readonly storage: Storage,
     private readonly credentials: KavitaCredentialStore = createKavitaCredentialStore(),
@@ -100,16 +102,26 @@ export class KavitaConnectionRepository {
   }
 
   async unlock(connectionId: string): Promise<boolean> {
-    const config = this.get(connectionId);
-    if (!config) return false;
-    const authKey = await this.credentials.get(connectionId);
-    if (!authKey) return false;
-    registerKavitaRuntimeConnection({
-      config,
-      device: this.getDeviceConfig(connectionId),
-      authKey,
-    });
-    return true;
+    const existing = this.unlocks.get(connectionId);
+    if (existing) return existing;
+    const operation = (async () => {
+      const config = this.get(connectionId);
+      if (!config) return false;
+      const authKey = await this.credentials.get(connectionId);
+      if (!authKey) return false;
+      registerKavitaRuntimeConnection({
+        config,
+        device: this.getDeviceConfig(connectionId),
+        authKey,
+      });
+      return true;
+    })();
+    this.unlocks.set(connectionId, operation);
+    try {
+      return await operation;
+    } finally {
+      if (this.unlocks.get(connectionId) === operation) this.unlocks.delete(connectionId);
+    }
   }
 
   async unlockAll(): Promise<void> {
@@ -132,6 +144,7 @@ export class KavitaConnectionRepository {
     );
     await this.credentials.clear(connectionId);
     unregisterKavitaRuntimeConnection(connectionId);
+    void import('./cover').then(({ clearKavitaCoverUrls }) => clearKavitaCoverUrls(connectionId));
     const { KAVITA_CONNECTION_KIND } = await import('@/services/sync/adapters/kavitaConnection');
     const { publishReplicaDelete } = await import('@/services/sync/replicaPublish');
     await publishReplicaDelete(KAVITA_CONNECTION_KIND, connectionId);
@@ -148,6 +161,7 @@ export class KavitaConnectionRepository {
     );
     await this.credentials.clear(connectionId);
     unregisterKavitaRuntimeConnection(connectionId);
+    void import('./cover').then(({ clearKavitaCoverUrls }) => clearKavitaCoverUrls(connectionId));
   }
 }
 

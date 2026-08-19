@@ -1,4 +1,4 @@
-import { KAVITA_API_KEY_HEADER, KAVITA_COVER_QUERY_PLACEHOLDER } from './constants';
+import { KAVITA_API_KEY_HEADER } from './constants';
 import { KavitaError, classifyKavitaHttpError, classifyKavitaNetworkError } from './errors';
 import { validateKavitaRangeResponse } from './range';
 import { normalizeKavitaBaseUrl } from './security';
@@ -170,16 +170,6 @@ export class KavitaClient {
 
   getChapterDownloadUrl(chapterId: number): string {
     return this.url('/api/Download/chapter', { chapterId });
-  }
-
-  getChapterCoverRequest(chapterId: number): { url: string; headers: Headers } {
-    return {
-      url: this.url('/api/Image/chapter-cover', {
-        chapterId,
-        apiKey: KAVITA_COVER_QUERY_PLACEHOLDER,
-      }),
-      headers: new Headers({ [KAVITA_API_KEY_HEADER]: this.authKey }),
-    };
   }
 
   async probeChapterRange(

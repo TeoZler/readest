@@ -1,6 +1,7 @@
 import type { Book } from '@/types/book';
 import { RemoteFile, type RemoteFileRangeCache } from '@/utils/file';
 import { KavitaClient } from './client';
+import { getKavitaConnectionRepository } from './connections';
 import { KAVITA_RANGE_CHUNK_SIZE } from './constants';
 import { KavitaError } from './errors';
 import { getKavitaRuntimeBaseUrl, getKavitaRuntimeConnection } from './runtime';
@@ -20,7 +21,11 @@ export async function openKavitaBookFile(
 ): Promise<RemoteFile> {
   const source = book.kavitaSource;
   if (!source) throw new KavitaError('not-found', 'Book has no Kavita source');
-  const runtime = getKavitaRuntimeConnection(source.connectionId);
+  let runtime = getKavitaRuntimeConnection(source.connectionId);
+  if (!runtime) {
+    await getKavitaConnectionRepository()?.unlock(source.connectionId);
+    runtime = getKavitaRuntimeConnection(source.connectionId);
+  }
   if (!runtime) {
     throw new KavitaError('authentication', 'Kavita connection is not unlocked on this device');
   }

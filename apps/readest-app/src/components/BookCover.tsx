@@ -4,7 +4,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { Book } from '@/types/book';
 import { LibraryCoverFitType, LibraryViewModeType } from '@/types/settings';
 import { formatAuthors, formatTitle } from '@/utils/book';
-import { loadKavitaCoverUrl } from '@/services/kavita/cover';
+import { acquireKavitaCoverUrl } from '@/services/kavita/cover';
 
 interface BookCoverProps {
   book: Book;
@@ -34,6 +34,18 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
     const [imageLoaded, setImageLoaded] = useState(false);
     const [imageError, setImageError] = useState(false);
     const [kavitaCoverUrl, setKavitaCoverUrl] = useState<string | null>(null);
+    const [visibleKavitaCoverKey, setVisibleKavitaCoverKey] = useState<string | null>(null);
+    const kavitaCoverKey = book.kavitaSource
+      ? [
+          book.hash,
+          book.kavitaSource.connectionId,
+          book.kavitaSource.serverId,
+          book.kavitaSource.chapterId,
+          book.kavitaSource.fileId,
+          book.kavitaSource.fileBytes,
+          book.kavitaSource.fileCreated,
+        ].join(':')
+      : null;
 
     const shouldShowSpine = showSpine && imageLoaded && !imageError;
 
@@ -72,14 +84,55 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
     }, [book.metadata?.coverImageUrl, book.coverImageUrl]);
 
     useEffect(() => {
+      setVisibleKavitaCoverKey(null);
+      if (!kavitaCoverKey) return;
+      const element = coverRef.current;
+      if (!element || typeof IntersectionObserver === 'undefined') {
+        setVisibleKavitaCoverKey(kavitaCoverKey);
+        return;
+      }
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          setVisibleKavitaCoverKey(kavitaCoverKey);
+          observer.disconnect();
+        },
+        { rootMargin: '50% 0px' },
+      );
+      observer.observe(element);
+      return () => observer.disconnect();
+    }, [kavitaCoverKey]);
+
+    useEffect(() => {
       setKavitaCoverUrl(null);
-      if (!book.kavitaSource) return;
-      const controller = new AbortController();
-      void loadKavitaCoverUrl(book, controller.signal)
-        ?.then(setKavitaCoverUrl)
-        .catch(() => setKavitaCoverUrl(null));
-      return () => controller.abort();
-    }, [book]);
+      if (!book.kavitaSource || visibleKavitaCoverKey !== kavitaCoverKey) return;
+      const lease = acquireKavitaCoverUrl(book);
+      if (!lease) return;
+      let active = true;
+      void lease.url
+        .then((url) => {
+          if (active) setKavitaCoverUrl(url);
+        })
+        .catch((error) => {
+          if (!active || (error instanceof DOMException && error.name === 'AbortError')) return;
+          setKavitaCoverUrl(null);
+          console.warn('[Kavita] EPUB cover unavailable', error);
+        });
+      return () => {
+        active = false;
+        lease.release();
+      };
+    }, [
+      book.hash,
+      book.kavitaSource?.connectionId,
+      book.kavitaSource?.serverId,
+      book.kavitaSource?.chapterId,
+      book.kavitaSource?.fileId,
+      book.kavitaSource?.fileBytes,
+      book.kavitaSource?.fileCreated,
+      kavitaCoverKey,
+      visibleKavitaCoverKey,
+    ]);
 
     const coverUrl = kavitaCoverUrl || book.metadata?.coverImageUrl || book.coverImageUrl || '';
 
@@ -170,6 +223,12 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
   (prevProps, nextProps) => {
     return (
       prevProps.book.coverImageUrl === nextProps.book.coverImageUrl &&
+      prevProps.book.hash === nextProps.book.hash &&
+      prevProps.book.kavitaSource?.connectionId === nextProps.book.kavitaSource?.connectionId &&
+      prevProps.book.kavitaSource?.serverId === nextProps.book.kavitaSource?.serverId &&
+      prevProps.book.kavitaSource?.chapterId === nextProps.book.kavitaSource?.chapterId &&
+      prevProps.book.kavitaSource?.fileId === nextProps.book.kavitaSource?.fileId &&
+      prevProps.book.kavitaSource?.fileBytes === nextProps.book.kavitaSource?.fileBytes &&
       prevProps.book.kavitaSource?.fileCreated === nextProps.book.kavitaSource?.fileCreated &&
       prevProps.book.metadata?.coverImageUrl === nextProps.book.metadata?.coverImageUrl &&
       prevProps.book.updatedAt === nextProps.book.updatedAt &&

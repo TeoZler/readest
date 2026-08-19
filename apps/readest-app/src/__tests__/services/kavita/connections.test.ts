@@ -32,10 +32,12 @@ class MemoryStorage implements Storage {
 class MemoryCredentials implements KavitaCredentialStore {
   readonly persistent = false;
   readonly values = new Map<string, string>();
+  getCount = 0;
   async set(id: string, value: string) {
     this.values.set(id, value);
   }
   async get(id: string) {
+    this.getCount += 1;
     return this.values.get(id) ?? null;
   }
   async clear(id: string) {
@@ -87,5 +89,24 @@ describe('KavitaConnectionRepository', () => {
     await repository.remove('connection', 'Home Kavita');
     expect(repository.get('connection')).toBeUndefined();
     expect(credentials.values.has('connection')).toBe(false);
+  });
+
+  it('deduplicates concurrent native credential unlocks', async () => {
+    const storage = new MemoryStorage();
+    const credentials = new MemoryCredentials();
+    const repository = new KavitaConnectionRepository(storage, credentials);
+    await repository.save(connection, device, 'key');
+    clearKavitaRuntimeConnections();
+    credentials.getCount = 0;
+
+    await expect(
+      Promise.all([
+        repository.unlock('connection'),
+        repository.unlock('connection'),
+        repository.unlock('connection'),
+      ]),
+    ).resolves.toEqual([true, true, true]);
+    expect(credentials.getCount).toBe(1);
+    expect(getKavitaRuntimeConnection('connection')?.authKey).toBe('key');
   });
 });

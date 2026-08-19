@@ -6,6 +6,7 @@ import { getKavitaConnectionRepository } from './connections';
 import { KavitaError } from './errors';
 import { getKavitaRuntimeBaseUrl, getKavitaRuntimeConnection } from './runtime';
 import { createKavitaTransport } from './transport';
+import { deleteStoredKavitaCovers } from './cover';
 
 let activeSync: Promise<KavitaCatalogSyncResult[]> | null = null;
 
@@ -34,16 +35,24 @@ export async function syncAllKavitaCatalogs(
         createKavitaTransport({ allowInvalidTls: runtime.device.allowInvalidTls }),
       );
       try {
+        const before = useLibraryStore.getState().library;
         const result = await syncKavitaCatalog({
           client,
           connection,
           currentBooks: useLibraryStore.getState().library,
           signal,
-          persistStage: async ({ books }) => {
-            await appService.saveLibraryBooks(books);
+          persistStage: async ({ books, final }) => {
+            await appService.saveLibraryBooks(books, final ? { replace: true } : undefined);
             useLibraryStore.getState().setLibrary(books);
           },
         });
+        const retained = new Set(result.books.map((book) => book.hash));
+        const removed = before.filter(
+          (book) => book.kavitaSource?.connectionId === connection.id && !retained.has(book.hash),
+        );
+        if (removed.length > 0) {
+          await deleteStoredKavitaCovers(appService, removed);
+        }
         const device = repository.getDeviceConfig(connection.id);
         repository.saveDeviceConfig({
           ...device,

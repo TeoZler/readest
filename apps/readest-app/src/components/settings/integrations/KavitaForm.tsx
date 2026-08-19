@@ -12,6 +12,7 @@ import {
 import { redactKavitaSecret } from '@/services/kavita/redaction';
 import type { KavitaConnectionConfig } from '@/services/kavita/types';
 import { clearKavitaRangeCache, getKavitaRangeCacheBytes } from '@/services/kavita/rangeCache';
+import { clearKavitaCoverUrls, deleteStoredKavitaCovers } from '@/services/kavita/cover';
 import { eventDispatcher } from '@/utils/event';
 import { getLocalBookFilename } from '@/utils/book';
 import SubPageHeader from '../SubPageHeader';
@@ -167,7 +168,9 @@ const KavitaForm: React.FC<KavitaFormProps> = ({ onBack, onConnectionsChanged })
         appService.deleteFile(getLocalBookFilename(book), 'Books').catch(() => undefined),
       ),
     );
+    await deleteStoredKavitaCovers(appService, affected);
     await clearKavitaRangeCache(connection.id);
+    clearKavitaCoverUrls(connection.id);
     await repository.remove(connection.id, typed);
     const next = useLibraryStore
       .getState()

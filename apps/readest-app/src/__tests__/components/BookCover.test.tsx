@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, cleanup, fireEvent } from '@testing-library/react';
+import { render, cleanup, fireEvent, waitFor, act } from '@testing-library/react';
 
 import BookCover from '@/components/BookCover';
 import { Book } from '@/types/book';
+
+const acquireKavitaCoverUrl = vi.hoisted(() => vi.fn());
+
+vi.mock('@/services/kavita/cover', () => ({ acquireKavitaCoverUrl }));
 
 vi.mock('next/image', () => ({
   __esModule: true,
@@ -12,7 +16,11 @@ vi.mock('next/image', () => ({
   },
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  acquireKavitaCoverUrl.mockReset();
+  vi.unstubAllGlobals();
+});
 
 const makeBook = (overrides?: Partial<Book>): Book =>
   ({
@@ -23,6 +31,25 @@ const makeBook = (overrides?: Partial<Book>): Book =>
     coverImageUrl: 'https://example.com/cover.jpg',
     ...overrides,
   }) as Book;
+
+const makeKavitaSource = (): NonNullable<Book['kavitaSource']> => ({
+  kind: 'kavita',
+  connectionId: 'connection',
+  serverId: 'server',
+  libraryId: 2,
+  libraryName: 'Books',
+  seriesId: 3,
+  seriesName: 'Series',
+  volumeId: 4,
+  chapterId: 5,
+  fileId: 6,
+  fileBytes: 1024,
+  fileCreated: '2026-08-19T00:00:00Z',
+  fileExtension: '.epub',
+  koreaderHash: 'ko-hash',
+  offlineState: 'remote',
+  lastSeenAt: 1,
+});
 
 describe('BookCover', () => {
   it('passes loading="lazy" to crop-mode Image', () => {
@@ -63,5 +90,89 @@ describe('BookCover', () => {
     const { container } = render(<BookCover book={book} coverFit='crop' />);
     const fallback = container.querySelector('.fallback-cover');
     expect(fallback?.textContent).toContain('Edited Author');
+  });
+
+  it('uses the extracted Kavita cover and releases its lease when the file version changes', async () => {
+    const releaseFirst = vi.fn();
+    const releaseSecond = vi.fn();
+    acquireKavitaCoverUrl
+      .mockReturnValueOnce({ url: Promise.resolve('blob:kavita-cover-v1'), release: releaseFirst })
+      .mockReturnValueOnce({
+        url: Promise.resolve('blob:kavita-cover-v2'),
+        release: releaseSecond,
+      });
+    const kavitaSource = makeKavitaSource();
+    const { container, rerender, unmount } = render(
+      <BookCover book={makeBook({ kavitaSource })} coverFit='crop' />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector('img.cover-image')?.getAttribute('src')).toBe(
+        'blob:kavita-cover-v1',
+      );
+    });
+    rerender(
+      <BookCover
+        book={makeBook({
+          kavitaSource: { ...kavitaSource, fileCreated: '2026-08-19T00:01:00Z' },
+        })}
+        coverFit='crop'
+      />,
+    );
+    await waitFor(() => {
+      expect(releaseFirst).toHaveBeenCalledOnce();
+      expect(container.querySelector('img.cover-image')?.getAttribute('src')).toBe(
+        'blob:kavita-cover-v2',
+      );
+    });
+    unmount();
+    expect(releaseSecond).toHaveBeenCalledOnce();
+  });
+
+  it('does not extract a Kavita cover until the card approaches the viewport', async () => {
+    let intersectionCallback: IntersectionObserverCallback | undefined;
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(callback: IntersectionObserverCallback) {
+          intersectionCallback = callback;
+        }
+        observe() {}
+        unobserve() {}
+        disconnect = disconnect;
+        takeRecords() {
+          return [];
+        }
+        root = null;
+        rootMargin = '50% 0px';
+        thresholds = [0];
+      },
+    );
+    const release = vi.fn();
+    acquireKavitaCoverUrl.mockReturnValue({
+      url: Promise.resolve('blob:visible-kavita-cover'),
+      release,
+    });
+    const { container, unmount } = render(
+      <BookCover book={makeBook({ kavitaSource: makeKavitaSource() })} coverFit='crop' />,
+    );
+
+    expect(acquireKavitaCoverUrl).not.toHaveBeenCalled();
+    act(() => {
+      intersectionCallback?.(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+    });
+    await waitFor(() => {
+      expect(acquireKavitaCoverUrl).toHaveBeenCalledOnce();
+      expect(container.querySelector('img.cover-image')?.getAttribute('src')).toBe(
+        'blob:visible-kavita-cover',
+      );
+    });
+    expect(disconnect).toHaveBeenCalled();
+    unmount();
+    expect(release).toHaveBeenCalledOnce();
   });
 });
