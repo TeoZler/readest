@@ -111,6 +111,37 @@ describe('getBookContextMenuItemIds', () => {
     ]);
   });
 
+  it('offers device-only offline actions for Kavita books', () => {
+    const remote = createBook({
+      kavitaSource: {
+        kind: 'kavita',
+        connectionId: 'connection',
+        serverId: 'server',
+        libraryId: 1,
+        libraryName: 'Books',
+        seriesId: 2,
+        seriesName: 'Series',
+        volumeId: 3,
+        chapterId: 4,
+        fileId: 5,
+        fileBytes: 6,
+        fileCreated: 'v1',
+        fileExtension: '.epub',
+        koreaderHash: 'hash',
+        offlineState: 'remote',
+        lastSeenAt: 1,
+      },
+    });
+    expect(getBookContextMenuItemIds(remote)).toContain('download');
+    expect(getBookContextMenuItemIds(remote)).not.toContain('upload');
+    expect(getBookContextMenuItemIds(remote)).not.toContain('share');
+    expect(getBookContextMenuItemIds(remote)).not.toContain('showInFinder');
+
+    remote.kavitaSource!.offlineState = 'offline';
+    expect(getBookContextMenuItemIds(remote)).toContain('removeOffline');
+    expect(getBookContextMenuItemIds(remote)).toContain('showInFinder');
+  });
+
   // Issue #5307 — a feed subscription has no file anywhere: the cloud has
   // nothing to upload it to and nothing to hand a share link. Offering those
   // actions only produces a failed transfer.

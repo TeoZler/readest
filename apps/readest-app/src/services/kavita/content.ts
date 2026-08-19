@@ -5,10 +5,13 @@ import { KAVITA_RANGE_CHUNK_SIZE } from './constants';
 import { KavitaError } from './errors';
 import { getKavitaRuntimeBaseUrl, getKavitaRuntimeConnection } from './runtime';
 import { createKavitaTransport } from './transport';
+import { KavitaPersistentRangeCache } from './rangeCache';
 
 export interface OpenKavitaBookOptions {
   signal?: AbortSignal;
   rangeCache?: RemoteFileRangeCache;
+  disableCache?: boolean;
+  onProgress?: (loaded: number, total: number) => void;
 }
 
 export async function openKavitaBookFile(
@@ -40,7 +43,13 @@ export async function openKavitaBookFile(
       chunkSize: KAVITA_RANGE_CHUNK_SIZE,
       retries: 2,
       signal: options.signal,
-      rangeCache: options.rangeCache,
+      onProgress: options.onProgress,
+      rangeCache: options.disableCache
+        ? undefined
+        : (options.rangeCache ??
+          (runtime.device.cacheEnabled
+            ? new KavitaPersistentRangeCache(source, runtime.device.cacheCapacityBytes)
+            : undefined)),
     },
   ).open();
 }

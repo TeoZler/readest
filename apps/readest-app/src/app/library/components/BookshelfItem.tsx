@@ -25,6 +25,7 @@ import BookItem from './BookItem';
 import GroupItem from './GroupItem';
 import BookContextMenuPopup, { type BookContextMenuItem } from './BookContextMenuPopup';
 import { useOpenBook } from '../hooks/useOpenBook';
+import { transferManager } from '@/services/transferManager';
 
 export const generateBookshelfItems = (
   books: Book[],
@@ -264,6 +265,12 @@ const BookshelfItem: React.FC<BookshelfItemProps> = ({
         text: _('Download Book'),
         action: async () => {
           handleBookDownload(book, { queued: true });
+        },
+      },
+      removeOffline: {
+        text: _('Remove Offline Copy'),
+        action: async () => {
+          transferManager.queueKavitaOfflineRemoval(book);
         },
       },
       upload: {

@@ -20,7 +20,7 @@ test infrastructure must never be added to this repository.
 | Phase 0 — isolated baseline | Complete | Exact SHAs verified; submodules synchronized; `pnpm install --frozen-lockfile` passed |
 | Phase 1 — API and range proof | Complete | Non-admin Auth Key authentication, supported version, Library access, exact `206` Range, and original-file proof passed |
 | Phase 2 — connection and shelf sync | Complete | Connection UI, explicit Library selection, staged pagination, source filters, and deletion safety |
-| Phase 3 — reading, cache, offline | Pending | foliate-js lazy read, persistent LRU cache, verified offline transfer |
+| Phase 3 — reading, cache, offline | Complete | Strict lazy foliate-js open, persistent LRU cache, verified queued offline transfer |
 | Phase 4 — progress and credentials | Pending | Kavita-owned progress, encrypted credentials, conflict handling |
 | Phase 5 — platform acceptance | Pending | Web, Windows, and Android runtime gates |
 
@@ -100,3 +100,22 @@ book identity is therefore `md5("kavita:" + serverId + ":" + chapterId)`.
   no-change scan was 3204 ms. See `BENCHMARKS.md`.
 - Targeted regression: `51` test files and `383` assertions passed; repository
   lint and type checking passed (`2024` files checked).
+
+## Phase 3 verification
+
+- Kavita EPUBs open through the existing foliate-js `DocumentLoader`; the
+  authenticated `RemoteFile` path rejects HTTP `200` Range rewrites and keeps
+  128 KiB aligned reads cancellable, deduplicated and retry-limited.
+- Browser lazy-open proof loaded metadata, navigation and the first text
+  chapter from a 414345-byte EPUB using two requests and 152201 bytes (36.7%),
+  with no full-file response. See `BENCHMARKS.md`.
+- The persistent cache uses a Kavita-only IndexedDB namespace, versioned keys,
+  configurable per-server limits and LRU eviction. Real Chromium tests cover
+  exact hits, version invalidation and eviction.
+- Full offline EPUBs use the existing transfer queue for progress, cancellation
+  and retry; temporary files are size-checked and parsed as EPUB before atomic
+  promotion. Failure removes the partial file, and server deletion removes
+  offline copies plus the server cache after typed-name confirmation.
+- Targeted Phase 3 regression passed (`4` test files, `21` assertions), browser
+  tests passed (`2` files, `3` assertions), and repository lint/type checking
+  passed (`2033` files checked).

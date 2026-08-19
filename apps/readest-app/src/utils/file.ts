@@ -18,6 +18,7 @@ export interface RemoteFileOptions {
   retries?: number;
   signal?: AbortSignal;
   rangeCache?: RemoteFileRangeCache;
+  onProgress?: (loaded: number, total: number) => void;
 }
 
 class DeferredBlob extends Blob {
@@ -317,6 +318,7 @@ export class RemoteFile extends File implements ClosableFile {
   #retries: number;
   #signal?: AbortSignal;
   #rangeCache?: RemoteFileRangeCache;
+  #onProgress?: (loaded: number, total: number) => void;
   // When true, byte ranges are carried in the URL query (?start=&end=) instead
   // of a `Range` header — see fromNativePath().
   #queryRange = false;
@@ -346,6 +348,7 @@ export class RemoteFile extends File implements ClosableFile {
     this.#retries = Math.max(0, options.retries ?? 0);
     this.#signal = options.signal;
     this.#rangeCache = options.rangeCache;
+    this.#onProgress = options.onProgress;
     if (options.knownSize !== undefined) this.#size = options.knownSize;
   }
 
@@ -679,6 +682,7 @@ export class RemoteFile extends File implements ClosableFile {
 
         controller.enqueue(new Uint8Array(buffer));
         offset = end;
+        this.#onProgress?.(offset, this.size);
       },
     });
   }

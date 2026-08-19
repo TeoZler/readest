@@ -847,6 +847,7 @@ export type BookContextMenuItemId =
   | 'showInFinder'
   | 'searchGoodreads'
   | 'download'
+  | 'removeOffline'
   | 'upload'
   | 'share'
   | 'delete';
@@ -972,10 +973,15 @@ export const getBookContextMenuItemIds = (book: Book): BookContextMenuItemId[] =
   ) {
     ids.push('clearStatus');
   }
-  ids.push('showDetails', 'showInFinder', 'searchGoodreads');
+  ids.push('showDetails');
+  if (!book.kavitaSource || book.kavitaSource.offlineState === 'offline') ids.push('showInFinder');
+  ids.push('searchGoodreads');
   // A feed book has no file to move: every transfer action would fail, and the
   // share dialog uploads before it can hand out a link (issue #5307).
-  if (!isFeedBook(book)) {
+  if (book.kavitaSource) {
+    if (book.kavitaSource.offlineState === 'offline') ids.push('removeOffline');
+    else if (book.kavitaSource.offlineState !== 'orphaned') ids.push('download');
+  } else if (!isFeedBook(book)) {
     if (book.uploadedAt && !book.downloadedAt) ids.push('download');
     if (!book.uploadedAt && book.downloadedAt) ids.push('upload');
     // Share is offered for any local-or-uploaded book; the dialog uploads first

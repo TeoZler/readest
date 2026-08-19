@@ -85,6 +85,17 @@ export const useBookTransferActions = (
   const handleBookDownload = useCallback(
     async (book: Book, downloadOptions: BookDownloadOptions = {}) => {
       const { redownload = false, queued = false, silent = false } = downloadOptions;
+      if (book.kavitaSource) {
+        const transferId = transferManager.queueDownload(book, 1);
+        if (transferId && !silent) {
+          eventDispatcher.dispatch('toast', {
+            type: 'info',
+            timeout: 2000,
+            message: _('Download queued: {{title}}', { title: book.title }),
+          });
+        }
+        return !!transferId;
+      }
       const settingsNow = useSettingsStore.getState().settings;
       const backends = getActiveFileSyncBackends(settingsNow);
       const readest = isReadestCloudEnabled(settingsNow);

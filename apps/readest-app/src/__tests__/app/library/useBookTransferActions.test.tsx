@@ -121,6 +121,38 @@ describe('useBookTransferActions upload routing (issue #5062)', () => {
 });
 
 describe('useBookTransferActions download routing (issue #5062)', () => {
+  it('always sends Kavita offline downloads through the Kavita transfer queue', async () => {
+    routing.readestEnabled = true;
+    routing.backends = ['webdav'];
+
+    const { result } = setup();
+    const book = makeBook({
+      kavitaSource: {
+        kind: 'kavita',
+        connectionId: 'connection',
+        serverId: 'server',
+        libraryId: 1,
+        libraryName: 'Books',
+        seriesId: 2,
+        seriesName: 'Series',
+        volumeId: 3,
+        chapterId: 4,
+        fileId: 5,
+        fileBytes: 6,
+        fileCreated: 'v1',
+        fileExtension: '.epub',
+        koreaderHash: 'hash',
+        offlineState: 'remote',
+        lastSeenAt: 1,
+      },
+    });
+    const ok = await result.current.handleBookDownload(book, { queued: true });
+
+    expect(runFileBookDownload).not.toHaveBeenCalled();
+    expect(queueDownload).toHaveBeenCalledWith(book, 1);
+    expect(ok).toBe(true);
+  });
+
   it('uses the native (queue-backed) path when the book is already in Readest Cloud storage', async () => {
     routing.readestEnabled = true;
     routing.backends = ['webdav'];

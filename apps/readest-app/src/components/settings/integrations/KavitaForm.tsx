@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useEnv } from '@/context/EnvContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useLibraryStore } from '@/store/libraryStore';
@@ -11,7 +11,9 @@ import {
 } from '@/services/kavita/diagnostics';
 import { redactKavitaSecret } from '@/services/kavita/redaction';
 import type { KavitaConnectionConfig } from '@/services/kavita/types';
+import { clearKavitaRangeCache, getKavitaRangeCacheBytes } from '@/services/kavita/rangeCache';
 import { eventDispatcher } from '@/utils/event';
+import { getLocalBookFilename } from '@/utils/book';
 import SubPageHeader from '../SubPageHeader';
 import { SectionTitle, SettingLabel, Tips } from '../primitives';
 
@@ -38,6 +40,16 @@ const KavitaForm: React.FC<KavitaFormProps> = ({ onBack, onConnectionsChanged })
   const [selectedLibraries, setSelectedLibraries] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [cacheBytes, setCacheBytes] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    void Promise.all(
+      connections.map(
+        async (connection) =>
+          [connection.id, await getKavitaRangeCacheBytes(connection.id)] as const,
+      ),
+    ).then((entries) => setCacheBytes(Object.fromEntries(entries)));
+  }, [connections]);
 
   const refreshConnections = () => {
     setConnections(repository?.list() ?? []);
@@ -142,8 +154,14 @@ const KavitaForm: React.FC<KavitaFormProps> = ({ onBack, onConnectionsChanged })
       ),
     );
     if (typed !== connection.name) return;
-    await repository.remove(connection.id, typed);
     const appService = await envConfig.getAppService();
+    await Promise.all(
+      offline.map((book) =>
+        appService.deleteFile(getLocalBookFilename(book), 'Books').catch(() => undefined),
+      ),
+    );
+    await clearKavitaRangeCache(connection.id);
+    await repository.remove(connection.id, typed);
     const next = useLibraryStore
       .getState()
       .library.filter((book) => book.kavitaSource?.connectionId !== connection.id);
@@ -228,6 +246,49 @@ const KavitaForm: React.FC<KavitaFormProps> = ({ onBack, onConnectionsChanged })
                     {_('Allow an invalid TLS certificate on this device')}
                   </label>
                 )}
+                <div className='flex flex-wrap items-end gap-3'>
+                  <label className='flex items-center gap-2 text-sm'>
+                    <input
+                      type='checkbox'
+                      className='checkbox checkbox-sm'
+                      defaultChecked={device?.cacheEnabled ?? true}
+                      onChange={(event) =>
+                        repository?.saveDeviceConfig({
+                          ...repository.getDeviceConfig(connection.id),
+                          cacheEnabled: event.target.checked,
+                        })
+                      }
+                    />
+                    {_('Persistent Range cache')}
+                  </label>
+                  <label className='text-sm'>
+                    <span className='text-base-content/70 me-2'>{_('Limit (MiB)')}</span>
+                    <input
+                      type='number'
+                      min={0}
+                      className='input input-bordered h-9 w-24'
+                      defaultValue={Math.round((device?.cacheCapacityBytes ?? 0) / 1024 / 1024)}
+                      onBlur={(event) =>
+                        repository?.saveDeviceConfig({
+                          ...repository.getDeviceConfig(connection.id),
+                          cacheCapacityBytes:
+                            Math.max(0, Number(event.target.value) || 0) * 1024 * 1024,
+                        })
+                      }
+                    />
+                  </label>
+                  <button
+                    type='button'
+                    className='btn btn-sm'
+                    onClick={async () => {
+                      await clearKavitaRangeCache(connection.id);
+                      setCacheBytes((current) => ({ ...current, [connection.id]: 0 }));
+                    }}
+                  >
+                    {_('Clear cache')} (
+                    {((cacheBytes[connection.id] ?? 0) / 1024 / 1024).toFixed(1)} MiB)
+                  </button>
+                </div>
                 {device?.lastDiagnostic && !device.lastDiagnostic.ok && (
                   <p className='text-error text-sm'>{device.lastDiagnostic.message}</p>
                 )}

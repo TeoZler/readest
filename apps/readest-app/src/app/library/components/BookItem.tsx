@@ -217,6 +217,16 @@ const BookItem: React.FC<BookItemProps> = ({
                   role='progressbar'
                 ></div>
               )
+            ) : book.kavitaSource && kavitaState !== 'offline' && kavitaState !== 'orphaned' ? (
+              <button
+                aria-label={_('Download for offline reading')}
+                title={_('Download for offline reading')}
+                className='show-cloud-button -m-2 p-2'
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => handleBookDownload(book, { queued: true })}
+              >
+                <LiaCloudDownloadAltSolid size={iconSize15} />
+              </button>
             ) : (
               // A feed book has no file to move either way, so it never gets a
               // cloud badge — it would only queue a transfer that fails (#5307).

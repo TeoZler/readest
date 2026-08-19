@@ -30,3 +30,18 @@ The benchmark only fetched catalog metadata; no EPUB response was requested.
 - First request: `bytes=0-1023` → `206`, exactly 1024 bytes
 - Tail request: `bytes=791828-792851` → `206`, exactly 1024 bytes
 - A separate explicit full download matched the source EPUB by SHA-256.
+
+## foliate-js lazy-open proof — 2026-08-19
+
+The browser integration test serves the checked-in 414345-byte Alice EPUB
+through the same strict authenticated-Range seam used by Kavita and opens it
+with the unmodified `DocumentLoader` from foliate-js. Metadata, navigation and
+the first text chapter required two non-overlapping requests:
+
+- `bytes=0-131071`
+- `bytes=393216-414344`
+
+Only 152201 bytes (36.7%) were received before the first chapter was available;
+no response contained the full file. Existing foliate-js browser suites remain
+the coverage for cross-chapter navigation, images, fonts, search, themes,
+pagination and rendering behavior.

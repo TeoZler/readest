@@ -7,6 +7,7 @@ import { TranslationFunc } from '@/hooks/useTranslation';
 import { createProgressThrottle, ProgressHandler, ProgressPayload } from '@/utils/transfer';
 import { eventDispatcher } from '@/utils/event';
 import { getTransferMessages } from './transferMessages';
+import { downloadKavitaBookOffline, removeKavitaOfflineBook } from './kavita/offline';
 
 const TRANSFER_QUEUE_KEY = 'readest_transfer_queue';
 const RETRY_DELAY_BASE_MS = 2000;
@@ -183,7 +184,9 @@ class TransferManager {
       return existing.id;
     }
 
-    const transferId = store.addTransfer(book.hash, book.title, 'download', priority);
+    const transferId = book.kavitaSource
+      ? store.addKavitaTransfer(book.hash, book.title, 'download', priority)
+      : store.addTransfer(book.hash, book.title, 'download', priority);
     this.persistQueue();
     this.processQueue();
     return transferId;
@@ -203,6 +206,17 @@ class TransferManager {
     }
 
     const transferId = store.addTransfer(book.hash, book.title, 'delete', priority, isBackground);
+    this.persistQueue();
+    this.processQueue();
+    return transferId;
+  }
+
+  queueKavitaOfflineRemoval(book: Book, priority: number = 10): string | null {
+    if (!this.isReady() || !book.kavitaSource) return null;
+    const store = useTransferStore.getState();
+    const existing = store.getTransferByBookHash(book.hash, 'delete');
+    if (existing) return existing.id;
+    const transferId = store.addKavitaTransfer(book.hash, book.title, 'delete', priority);
     this.persistQueue();
     this.processQueue();
     return transferId;
@@ -434,6 +448,8 @@ class TransferManager {
     try {
       if (transfer.kind === 'replica') {
         await this.executeReplicaTransfer(transfer, progressHandler, abortController);
+      } else if (transfer.kind === 'kavita') {
+        await this.executeKavitaTransfer(transfer, progressHandler, abortController);
       } else {
         await this.executeBookTransfer(transfer, progressHandler, abortController);
       }
@@ -563,6 +579,30 @@ class TransferManager {
       await this.appService!.deleteBook(book, 'cloud');
       await this.updateBook!(book);
     }
+  }
+
+  private async executeKavitaTransfer(
+    transfer: TransferItem,
+    progressHandler: (p: ProgressPayload) => void,
+    abortController: AbortController,
+  ): Promise<void> {
+    const book = this.getLibrary!().find((candidate) => candidate.hash === transfer.bookHash);
+    if (!book?.kavitaSource) throw new Error(this._!('Kavita book not found in library'));
+    if (transfer.type === 'download') {
+      const updated = await downloadKavitaBookOffline(
+        this.appService!,
+        book,
+        progressHandler,
+        abortController.signal,
+      );
+      await this.updateBook!(updated);
+      return;
+    }
+    if (transfer.type === 'delete') {
+      await this.updateBook!(await removeKavitaOfflineBook(this.appService!, book));
+      return;
+    }
+    throw new Error('Kavita books cannot be uploaded');
   }
 
   private async executeReplicaTransfer(

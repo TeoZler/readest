@@ -3,7 +3,7 @@ import type { BaseDir } from '@/types/system';
 
 export type TransferType = 'upload' | 'download' | 'delete';
 export type TransferStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
-export type TransferKind = 'book' | 'replica';
+export type TransferKind = 'book' | 'replica' | 'kavita';
 /**
  * Why a transfer was cancelled. 'user' = an explicit cancel action;
  * 'policy' = the app cancelled it because Readest Cloud is not the
@@ -77,6 +77,12 @@ interface TransferState {
       base?: BaseDir;
       reincarnation?: string;
     },
+  ) => string;
+  addKavitaTransfer: (
+    bookHash: string,
+    bookTitle: string,
+    type: Extract<TransferType, 'download' | 'delete'>,
+    priority?: number,
   ) => string;
   removeTransfer: (transferId: string) => void;
   updateTransferProgress: (
@@ -208,6 +214,29 @@ export const useTransferStore = create<TransferState>((set, get) => ({
       transfers: { ...state.transfers, [id]: transfer },
     }));
 
+    return id;
+  },
+
+  addKavitaTransfer: (bookHash, bookTitle, type, priority = 10) => {
+    const id = generateTransferId();
+    const transfer: TransferItem = {
+      id,
+      kind: 'kavita',
+      bookHash,
+      bookTitle,
+      type,
+      status: 'pending',
+      progress: 0,
+      totalBytes: 0,
+      transferredBytes: 0,
+      transferSpeed: 0,
+      retryCount: 0,
+      maxRetries: 3,
+      createdAt: Date.now(),
+      priority,
+      isBackground: false,
+    };
+    set((state) => ({ transfers: { ...state.transfers, [id]: transfer } }));
     return id;
   },
 
