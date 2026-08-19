@@ -22,7 +22,7 @@ test infrastructure must never be added to this repository.
 | Phase 2 — connection and shelf sync | Complete | Connection UI, explicit Library selection, staged pagination, source filters, and deletion safety |
 | Phase 3 — reading, cache, offline | Complete | Strict lazy foliate-js open, persistent LRU cache, verified queued offline transfer |
 | Phase 4 — progress and credentials | Complete | Kavita-owned progress, encrypted credentials, conflict handling and offline queue |
-| Phase 5 — platform acceptance | Pending | Web, Windows, and Android runtime gates |
+| Phase 5 — platform acceptance | Complete | Full Web/Windows/Android checks and real Android Kavita runtime acceptance passed; Web remains explicitly conditional |
 
 ## Phase 0 verification
 
@@ -46,10 +46,12 @@ Results on 2026-08-19:
 
 ## Current blockers
 
-- None for Phase 2 implementation. The instance-identity API mismatch was
-  resolved by the recorded `serverId` decision below.
-- Web support remains conditional on Kavita CORS, HTTPS/mixed-content rules,
-  certificate trust, and exposed Range headers.
+- No Readest V1 implementation or native-platform blocker remains.
+- Positive Web connectivity to an unmodified Kavita `v0.9.0.2` production
+  server is unavailable: real catalog and Range preflights returned `204`
+  without `Access-Control-Allow-Origin` or allowed/exposed header fields. This
+  is the documented conditional-Web boundary; Readest classifies and explains
+  it instead of adding a private-network proxy or weakening browser security.
 
 ## Phase 1 real-server evidence
 
@@ -142,3 +144,36 @@ book identity is therefore `md5("kavita:" + serverId + ":" + chapterId)`.
 - Targeted Phase 4 regression passed (`3` files, `11` assertions), the browser
   credential suite passed (`1` file, `2` assertions), and repository lint/type
   checking passed (`2033` files checked).
+
+## Phase 5 verification
+
+- Full unit regression passed: `717` files passed, `4` skipped; `9012`
+  assertions passed, `16` skipped. Full browser regression passed: `36` files,
+  `358` assertions passed, `1` skipped. The production Web build also passed.
+- Browser acceptance covers allowed CORS, preflight rejection, HTTPS mixed
+  content, missing Range exposure, a proxy-rewritten `200`, AES-GCM credential
+  storage and quota failures. Against the real pinned Kavita server, both the
+  catalog preflight (`x-api-key`) and chapter preflight (`range,x-api-key`)
+  returned `204` without CORS allow headers, and the conditional-support
+  diagnostic rejected the connection as designed.
+- Rust acceptance passed `89/89` tests, formatting, and clippy with warnings
+  denied. Windows Tauri WebDriver passed `113` tests with `1` skipped; the
+  production `tauri build --no-bundle` produced `target/release/readest.exe`.
+- The Android x86_64 debug APK built with SDK 36, NDK 28.2 and JDK 17, installed
+  in the API 36 emulator, and passed all `16/16` Android CDP/ADB tests. The
+  Windows-hosted Android cross-build uses a vendored `turso_ext 0.6.1` whose
+  build script reads Cargo target metadata, preventing the host-only
+  `advapi32` link flag from leaking into Android; runtime source is unchanged.
+- Real Android native HTTP connected to `http://10.0.2.2:5001` with the
+  non-admin Auth Key, validated Library/download access and a representative
+  `206`, selected the fixture Library, and imported the 715-file catalog. Cold
+  start took `2305 ms`; a HOME/background hot restore retained the process and
+  returned in `219 ms`.
+- Opening a 9,095,890-byte Kavita EPUB displayed foliate-js page `1 / 307`
+  while Kavita served only `206` chapter ranges. The device reported `2.5 MiB`
+  in the dedicated Range cache. A queued offline download then reached 100%,
+  size-checked and trial-opened the EPUB, and marked it `Offline`.
+- With the Kavita container stopped, Readest was force-stopped and cold-started.
+  The offline book remained on the shelf and opened again to foliate-js page
+  `1 / 307` while the server state stayed `exited`. The server was restored to
+  healthy after the test.

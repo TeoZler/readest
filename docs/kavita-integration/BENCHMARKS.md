@@ -45,3 +45,24 @@ Only 152201 bytes (36.7%) were received before the first chapter was available;
 no response contained the full file. Existing foliate-js browser suites remain
 the coverage for cross-chapter navigation, images, fonts, search, themes,
 pagination and rendering behavior.
+
+## Android native runtime — 2026-08-19
+
+Environment:
+
+- Android API 36 x86_64 emulator with ANGLE
+- Readest debug APK built with SDK 36, NDK 28.2 and JDK 17
+- Kavita `v0.9.0.2` reached through emulator host alias `10.0.2.2`
+
+Results:
+
+- Cold launch: `2305 ms`
+- HOME/background hot restore: `219 ms`, same application process
+- Catalog: the real 715-file Library connected and imported successfully
+- Online open: foliate-js displayed page `1 / 307`; every observed chapter
+  response was `206`, and the dedicated persistent Range cache reached
+  `2.5 MiB`
+- Offline transfer: `9,095,890` bytes, `100%`, no retry, final recorded speed
+  `122,045 bytes/s`
+- Offline restart: after Kavita was stopped and Readest was force-stopped, the
+  book remained `Offline` and reopened to page `1 / 307`

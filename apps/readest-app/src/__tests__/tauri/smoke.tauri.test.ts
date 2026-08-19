@@ -30,7 +30,8 @@ describe('Tauri Smoke Tests', () => {
   it('should invoke get_environment_variable for PATH', async () => {
     const pathVar = (await invoke('get_environment_variable', { name: 'PATH' })) as string;
     expect(typeof pathVar).toBe('string');
-    expect(pathVar).toContain('/');
+    expect(pathVar.length).toBeGreaterThan(0);
+    expect(pathVar).toMatch(/[\\/]/);
   });
 
   it('should get executable dir that contains the app name', async () => {

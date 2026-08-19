@@ -421,7 +421,29 @@ export const extendSelectionFromContents = (
   for (const { doc } of contents) {
     const sel = doc.defaultView?.getSelection();
     if (sel && !sel.isCollapsed) {
-      if (extend) sel.modify('extend', adjustment.direction, adjustment.granularity);
+      if (extend) {
+        const previousFocusNode = sel.focusNode;
+        const previousFocusOffset = sel.focusOffset;
+        sel.modify('extend', adjustment.direction, adjustment.granularity);
+        // Chromium may interpret a word move from a word boundary as only the
+        // adjacent whitespace. Desktop Ctrl/Option+Shift+Arrow is expected to
+        // include the next word. Advance once more only for that whitespace-
+        // only stop; browsers that already crossed the word are untouched.
+        if (
+          adjustment.granularity === 'word' &&
+          previousFocusNode?.nodeType === Node.TEXT_NODE &&
+          sel.focusNode === previousFocusNode
+        ) {
+          const text = previousFocusNode.textContent ?? '';
+          const crossed = text.slice(
+            Math.min(previousFocusOffset, sel.focusOffset),
+            Math.max(previousFocusOffset, sel.focusOffset),
+          );
+          if (crossed.length > 0 && crossed.trim().length === 0) {
+            sel.modify('extend', adjustment.direction, adjustment.granularity);
+          }
+        }
+      }
       return true;
     }
   }
