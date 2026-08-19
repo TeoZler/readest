@@ -59,6 +59,13 @@ export class KavitaConnectionRepository {
     );
   }
 
+  saveDeviceConfig(device: KavitaDeviceConnectionConfig): void {
+    const devices = this.listDeviceConfigs().filter(
+      (item) => item.connectionId !== device.connectionId,
+    );
+    this.storage.setItem(DEVICE_CONFIGS_KEY, JSON.stringify([...devices, device]));
+  }
+
   async save(
     config: KavitaConnectionConfig,
     device: KavitaDeviceConnectionConfig,

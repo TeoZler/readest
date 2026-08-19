@@ -45,6 +45,9 @@ export const useBooksSync = () => {
       // Demo books are the sample shelf we hand anonymous web visitors, not the
       // user's content — they never go to the cloud (issue #5049).
       .filter((book) => !isDemoBook(book))
+      // Kavita catalog rows and their binaries are owned by the source server.
+      // Only the encrypted connection replica is synced through Readest.
+      .filter((book) => !book.kavitaSource)
       .filter(
         (book) =>
           !book.syncedAt ||

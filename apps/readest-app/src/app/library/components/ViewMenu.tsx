@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEnv } from '@/context/EnvContext';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -16,6 +16,8 @@ import NumberInput from '@/components/settings/NumberInput';
 import MenuItem from '@/components/MenuItem';
 import Menu from '@/components/Menu';
 import { ensureLibraryGroupByType } from '../utils/libraryUtils';
+import { useLibraryStore } from '@/store/libraryStore';
+import { getKavitaConnectionRepository } from '@/services/kavita/connections';
 
 interface ViewMenuProps {
   setIsDropdownOpen?: (isOpen: boolean) => void;
@@ -27,6 +29,8 @@ const ViewMenu: React.FC<ViewMenuProps> = ({ setIsDropdownOpen }) => {
   const searchParams = useSearchParams();
   const { envConfig } = useEnv();
   const { settings } = useSettingsStore();
+  const library = useLibraryStore((state) => state.library);
+  const sourceFilter = searchParams?.get('source') || 'all';
 
   const viewMode = settings.libraryViewMode;
   const coverFit = settings.libraryCoverFit;
@@ -93,6 +97,48 @@ const ViewMenu: React.FC<ViewMenuProps> = ({ setIsDropdownOpen }) => {
     { label: _('Ascending'), value: true },
     { label: _('Descending'), value: false },
   ];
+
+  const sourceOptions = useMemo(() => {
+    const options = [
+      { label: _('All sources'), value: 'all' },
+      { label: _('Local books'), value: 'local' },
+    ];
+    const names = new Map(
+      (getKavitaConnectionRepository()?.list() ?? []).map((connection) => [
+        connection.id,
+        connection.name,
+      ]),
+    );
+    const servers = new Set<string>();
+    const libraries = new Map<string, string>();
+    for (const book of library) {
+      const source = book.kavitaSource;
+      if (!source) continue;
+      if (!servers.has(source.connectionId)) {
+        servers.add(source.connectionId);
+        options.push({
+          label: names.get(source.connectionId) ?? _('Kavita server'),
+          value: `kavita:${source.connectionId}`,
+        });
+      }
+      libraries.set(
+        `${source.connectionId}:${source.libraryId}`,
+        `${names.get(source.connectionId) ?? 'Kavita'} · ${source.libraryName}`,
+      );
+    }
+    for (const [id, label] of libraries) {
+      options.push({ label, value: `kavita-library:${id}` });
+    }
+    return options;
+  }, [_, library]);
+
+  const handleSetSource = (value: string) => {
+    const params = new URLSearchParams(window.location.search);
+    if (value === 'all') params.delete('source');
+    else params.set('source', value);
+    params.delete('group');
+    navigateToLibrary(router, params.toString());
+  };
 
   const handleSetViewMode = async (value: LibraryViewModeType) => {
     await saveSysSettings(envConfig, 'libraryViewMode', value);
@@ -186,6 +232,18 @@ const ViewMenu: React.FC<ViewMenuProps> = ({ setIsDropdownOpen }) => {
       className='view-menu dropdown-content no-triangle z-20 mt-2 shadow-2xl'
       onCancel={() => setIsDropdownOpen?.(false)}
     >
+      <MenuItem label={_('Source')} buttonClass='min-h-8 !py-1' disabled />
+      {sourceOptions.map((option) => (
+        <MenuItem
+          key={option.value}
+          label={option.label}
+          buttonClass='min-h-8 !py-1'
+          toggled={sourceFilter === option.value}
+          onClick={() => handleSetSource(option.value)}
+          transient
+        />
+      ))}
+      <hr aria-hidden='true' className='border-base-200 my-1' />
       {/* View Mode */}
       {viewOptions.map((option) => (
         <MenuItem

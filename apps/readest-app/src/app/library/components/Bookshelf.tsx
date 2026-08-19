@@ -208,6 +208,7 @@ const Bookshelf: React.FC<BookshelfProps> = ({
 
   const groupId = searchParams?.get('group') || '';
   const queryTerm = searchParams?.get('q')?.trim() || null;
+  const sourceFilter = searchParams?.get('source') || 'all';
   const viewMode = searchParams?.get('view') || settings.libraryViewMode;
   const storedSortBy = ensureLibrarySortByType(searchParams?.get('sort'), settings.librarySortBy);
   const sortOrder = searchParams?.get('order') || (settings.librarySortAscending ? 'asc' : 'desc');
@@ -280,15 +281,32 @@ const Bookshelf: React.FC<BookshelfProps> = ({
     [router, searchParams],
   );
 
+  const sourceBooks = useMemo(() => {
+    if (sourceFilter === 'local') return libraryBooks.filter((book) => !book.kavitaSource);
+    if (sourceFilter.startsWith('kavita-library:')) {
+      const [, connectionId, libraryId] = sourceFilter.split(':');
+      return libraryBooks.filter((book) => {
+        const source = book.kavitaSource;
+        if (!source) return false;
+        return source.connectionId === connectionId && source.libraryId === Number(libraryId);
+      });
+    }
+    if (sourceFilter.startsWith('kavita:')) {
+      const connectionId = sourceFilter.slice('kavita:'.length);
+      return libraryBooks.filter((book) => book.kavitaSource?.connectionId === connectionId);
+    }
+    return libraryBooks;
+  }, [libraryBooks, sourceFilter]);
+
   const filteredBooks = useMemo(() => {
     const bookFilter = createBookFilter(queryTerm);
-    return queryTerm ? libraryBooks.filter((book) => bookFilter(book)) : libraryBooks;
-  }, [libraryBooks, queryTerm]);
+    return queryTerm ? sourceBooks.filter((book) => bookFilter(book)) : sourceBooks;
+  }, [sourceBooks, queryTerm]);
 
   const manualGroupName = groupBy === LibraryGroupByType.Group ? getGroupName(groupId) : undefined;
   const currentShelfBooks = useMemo(
-    () => resolveCurrentShelfBooks(libraryBooks, groupBy, groupId, manualGroupName),
-    [libraryBooks, groupBy, groupId, manualGroupName],
+    () => resolveCurrentShelfBooks(sourceBooks, groupBy, groupId, manualGroupName),
+    [sourceBooks, groupBy, groupId, manualGroupName],
   );
   const filteredShelfBooks = useMemo(() => {
     const bookFilter = createBookFilter(queryTerm);

@@ -54,6 +54,24 @@ describe('KavitaClient', () => {
     });
   });
 
+  it('normalizes Kavita itemsPerPage and totalItems pagination names', async () => {
+    const transport: KavitaTransport = async () =>
+      jsonResponse([], {
+        headers: {
+          Pagination: JSON.stringify({
+            currentPage: 1,
+            itemsPerPage: 50,
+            totalItems: 148,
+            totalPages: 3,
+          }),
+        },
+      });
+    const client = new KavitaClient('https://books.example.test', 'key', transport);
+    await expect(client.getSeriesPage(2, 1, 50)).resolves.toMatchObject({
+      pagination: { pageSize: 50, totalCount: 148, totalPages: 3 },
+    });
+  });
+
   it('fails safely if a proxy rewrites Range to HTTP 200', async () => {
     const transport: KavitaTransport = async () =>
       new Response(new ArrayBuffer(100), { status: 200 });

@@ -44,6 +44,8 @@ import GoogleDriveForm from './integrations/GoogleDriveForm';
 import OneDriveForm from './integrations/OneDriveForm';
 import ICloudForm from './integrations/ICloudForm';
 import S3Form from './integrations/S3Form';
+import KavitaForm from './integrations/KavitaForm';
+import { getKavitaConnectionRepository } from '@/services/kavita/connections';
 import { persistCloudProviderEnabled } from './integrations/cloudSync';
 import {
   canToggleCloudProvider,
@@ -75,6 +77,7 @@ type SubPage =
   | 'hardcover'
   | 'opds'
   | 'send'
+  | 'kavita'
   | null;
 
 /**
@@ -134,6 +137,9 @@ const IntegrationsPanel: React.FC = () => {
     !user || (userProfilePlan !== undefined && !isCloudSyncPremium) ? _('Premium') : undefined;
 
   const [subPage, setSubPage] = useState<SubPage>(null);
+  const [kavitaCount, setKavitaCount] = useState(
+    () => getKavitaConnectionRepository()?.list().length ?? 0,
+  );
 
   // Hydrate the OPDS store from settings so the row's catalog count is
   // accurate on first open. Without this the store starts empty and the
@@ -221,6 +227,17 @@ const IntegrationsPanel: React.FC = () => {
     return (
       <div className='my-4 w-full'>
         <BookOrbitForm onBack={() => setSubPage(null)} />
+      </div>
+    );
+  if (subPage === 'kavita')
+    return (
+      <div className='my-4 w-full'>
+        <KavitaForm
+          onBack={() => setSubPage(null)}
+          onConnectionsChanged={() =>
+            setKavitaCount(getKavitaConnectionRepository()?.list().length ?? 0)
+          }
+        />
       </div>
     );
   if (subPage === 'webdav')
@@ -536,6 +553,8 @@ const IntegrationsPanel: React.FC = () => {
 
   const opdsStatus =
     opdsCount > 0 ? _('{{count}} catalog', { count: opdsCount }) : _('No catalogs');
+  const kavitaStatus =
+    kavitaCount > 0 ? _('{{count}} server(s)', { count: kavitaCount }) : _('No servers');
 
   return (
     <div className='my-4 w-full space-y-6'>
@@ -550,6 +569,12 @@ const IntegrationsPanel: React.FC = () => {
         <SectionTitle className='mb-2'>{_('Reading Sync')}</SectionTitle>
         <div className='card eink-bordered border-base-200 bg-base-100 overflow-hidden border'>
           <div className='divide-base-200 divide-y'>
+            <IntegrationRow
+              icon={RiDatabase2Line}
+              title={_('Kavita')}
+              status={kavitaStatus}
+              onClick={() => setSubPage('kavita')}
+            />
             <IntegrationRow
               icon={RiBookOpenLine}
               title={_('KOReader')}

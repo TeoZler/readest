@@ -19,7 +19,7 @@ import { debounce } from '@/utils/debounce';
 import { DEFAULT_NEARBY_WORDS } from '@/utils/searchConfig';
 import { clearLibrarySearchHistory, loadLibrarySearchHistory } from './utils/searchHistory';
 import type { LibrarySearchTarget } from '@/types/book';
-import { navigateToLibrary, navigateToLogin, navigateToReader } from '@/utils/nav';
+import { navigateToLibrary, navigateToReader } from '@/utils/nav';
 import { getBookWithUpdatedMetadata, listFormater } from '@/utils/book';
 import { getImportErrorMessage } from '@/services/errors';
 import { ingestFile } from '@/services/ingestService';
@@ -93,6 +93,7 @@ import { BackupWindow } from './components/BackupWindow';
 import { CacheManagerWindow } from './components/CacheManagerWindow';
 import { useDragDropImport } from './hooks/useDragDropImport';
 import { useTransferQueue } from '@/hooks/useTransferQueue';
+import { useKavitaCatalogSync } from '@/hooks/useKavitaCatalogSync';
 import { useAppRouter } from '@/hooks/useAppRouter';
 import { Toast } from '@/components/Toast';
 import {
@@ -359,6 +360,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
   useTransferQueue(libraryLoaded);
 
   const { pullLibrary, pushLibrary } = useBooksSync();
+  const { syncKavitaNow } = useKavitaCatalogSync();
   // Library-scoped auto-sync for the active third-party cloud provider (WebDAV /
   // Google Drive): keeps library.json current on import / delete / book-close,
   // parity with useBooksSync. No-op when no provider is enabled.
@@ -370,19 +372,13 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
   usePullToRefresh(
     scrollRef,
     async () => {
-      if (!user) {
-        navigateToLogin(router);
-        return;
-      }
-      await pullLibrary(false, true);
+      await syncKavitaNow();
+      if (user) await pullLibrary(false, true);
       checkOPDSSubscriptions(true);
     },
     async () => {
-      if (!user) {
-        navigateToLogin(router);
-        return;
-      }
-      await pullLibrary(true, true);
+      await syncKavitaNow();
+      if (user) await pullLibrary(true, true);
       checkOPDSSubscriptions(true);
     },
   );
@@ -1151,6 +1147,19 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
     // object (which React holds as the previous snapshot) makes the comparator
     // see no change and the library cover only refreshes after a full reload.
     const updatedBook = getBookWithUpdatedMetadata(book, metadata, tags);
+    if (book.kavitaSource) {
+      const overrides = new Set(book.kavitaSource.localMetadataOverrides ?? []);
+      if (updatedBook.title !== book.title) overrides.add('title');
+      if (updatedBook.author !== book.author) overrides.add('author');
+      if (JSON.stringify(updatedBook.tags) !== JSON.stringify(book.tags)) overrides.add('tags');
+      if (JSON.stringify(updatedBook.metadata) !== JSON.stringify(book.metadata)) {
+        overrides.add('metadata');
+      }
+      updatedBook.kavitaSource = {
+        ...book.kavitaSource,
+        localMetadataOverrides: Array.from(overrides),
+      };
+    }
     if (metadata.coverImageBlobUrl || metadata.coverImageUrl || metadata.coverImageFile) {
       try {
         await appService?.updateCoverImage(

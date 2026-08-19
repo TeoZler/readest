@@ -4,6 +4,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { Book } from '@/types/book';
 import { LibraryCoverFitType, LibraryViewModeType } from '@/types/settings';
 import { formatAuthors, formatTitle } from '@/utils/book';
+import { loadKavitaCoverUrl } from '@/services/kavita/cover';
 
 interface BookCoverProps {
   book: Book;
@@ -32,6 +33,7 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
     const coverRef = useRef<HTMLDivElement>(null);
     const [imageLoaded, setImageLoaded] = useState(false);
     const [imageError, setImageError] = useState(false);
+    const [kavitaCoverUrl, setKavitaCoverUrl] = useState<string | null>(null);
 
     const shouldShowSpine = showSpine && imageLoaded && !imageError;
 
@@ -69,6 +71,18 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
       toggleImageVisibility(true);
     }, [book.metadata?.coverImageUrl, book.coverImageUrl]);
 
+    useEffect(() => {
+      setKavitaCoverUrl(null);
+      if (!book.kavitaSource) return;
+      const controller = new AbortController();
+      void loadKavitaCoverUrl(book, controller.signal)
+        ?.then(setKavitaCoverUrl)
+        .catch(() => setKavitaCoverUrl(null));
+      return () => controller.abort();
+    }, [book]);
+
+    const coverUrl = kavitaCoverUrl || book.metadata?.coverImageUrl || book.coverImageUrl || '';
+
     return (
       <div
         ref={coverRef}
@@ -77,7 +91,7 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
         {coverFit === 'crop' ? (
           <>
             <Image
-              src={book.metadata?.coverImageUrl || book.coverImageUrl!}
+              src={coverUrl}
               alt={book.title}
               fill={true}
               loading='lazy'
@@ -99,7 +113,7 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
               )}
             >
               <Image
-                src={book.metadata?.coverImageUrl || book.coverImageUrl!}
+                src={coverUrl}
                 alt={book.title}
                 width={0}
                 height={0}
@@ -156,6 +170,7 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
   (prevProps, nextProps) => {
     return (
       prevProps.book.coverImageUrl === nextProps.book.coverImageUrl &&
+      prevProps.book.kavitaSource?.fileCreated === nextProps.book.kavitaSource?.fileCreated &&
       prevProps.book.metadata?.coverImageUrl === nextProps.book.metadata?.coverImageUrl &&
       prevProps.book.updatedAt === nextProps.book.updatedAt &&
       prevProps.mode === nextProps.mode &&

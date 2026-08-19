@@ -90,22 +90,25 @@ const syncOneBackend = async (
   }
 
   const strategy = ps?.strategy ?? 'silent';
-  const result = await engine.syncLibrary(useLibraryStore.getState().library, {
-    strategy: strategy === 'prompt' ? 'silent' : strategy,
-    syncBooks: ps?.syncBooks ?? false,
-    fullSync: false,
-    concurrency: 6,
-    deviceId,
-    onProgress: ({ index, total, action }) => {
-      const label = action === 'downloading' ? _('Downloading') : _('Uploading');
-      useFileSyncStore
-        .getState()
-        .updateProgress(
-          kind,
-          _('{{action}} {{n}} / {{total}}', { action: label, n: index + 1, total }),
-        );
+  const result = await engine.syncLibrary(
+    useLibraryStore.getState().library.filter((book) => !book.kavitaSource),
+    {
+      strategy: strategy === 'prompt' ? 'silent' : strategy,
+      syncBooks: ps?.syncBooks ?? false,
+      fullSync: false,
+      concurrency: 6,
+      deviceId,
+      onProgress: ({ index, total, action }) => {
+        const label = action === 'downloading' ? _('Downloading') : _('Uploading');
+        useFileSyncStore
+          .getState()
+          .updateProgress(
+            kind,
+            _('{{action}} {{n}} / {{total}}', { action: label, n: index + 1, total }),
+          );
+      },
     },
-  });
+  );
 
   const latest = useSettingsStore.getState().settings;
   const next = { ...latest, [key]: { ...latest[key], lastSyncedAt: Date.now() } };
@@ -183,6 +186,7 @@ export const runFileLibrarySyncPass = async (
  * caller's job.
  */
 export const runFileBookUpload = async (envConfig: EnvConfigType, book: Book): Promise<boolean> => {
+  if (book.kavitaSource) return false;
   const backends = getActiveFileSyncBackends(useSettingsStore.getState().settings);
   let anyUploaded = false;
   for (const kind of backends) {
@@ -215,6 +219,7 @@ export const runFileBookDownload = async (
   envConfig: EnvConfigType,
   book: Book,
 ): Promise<boolean> => {
+  if (book.kavitaSource) return false;
   const backends = getActiveFileSyncBackends(useSettingsStore.getState().settings);
   for (const kind of backends) {
     try {

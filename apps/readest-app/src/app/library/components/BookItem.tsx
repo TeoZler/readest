@@ -71,6 +71,7 @@ const BookItem: React.FC<BookItemProps> = ({
     : undefined;
 
   const seriesText = formatSeries(book.metadata?.series, book.metadata?.seriesIndex);
+  const kavitaState = book.kavitaSource?.offlineState;
 
   return (
     <div
@@ -105,6 +106,22 @@ const BookItem: React.FC<BookItemProps> = ({
           )}
           onAspectRatioChange={setCoverAspect}
         />
+        {book.kavitaSource && (
+          <div className='absolute left-1 top-1 flex max-w-[calc(100%-0.5rem)] gap-1'>
+            <span className='badge badge-primary badge-xs shadow'>{_('Kavita')}</span>
+            <span className='badge badge-neutral badge-xs truncate shadow'>
+              {kavitaState === 'offline'
+                ? _('Offline')
+                : kavitaState === 'cached'
+                  ? _('Cached')
+                  : kavitaState === 'orphaned'
+                    ? _('Server removed')
+                    : kavitaState === 'downloading'
+                      ? _('Downloading')
+                      : _('Online')}
+            </span>
+          </div>
+        )}
         {bookSelected && (
           <div className='absolute inset-0 bg-black opacity-30 transition-opacity duration-300'></div>
         )}
@@ -204,6 +221,7 @@ const BookItem: React.FC<BookItemProps> = ({
               // A feed book has no file to move either way, so it never gets a
               // cloud badge — it would only queue a transfer that fails (#5307).
               !isFeedBook(book) &&
+              !book.kavitaSource &&
               (!book.uploadedAt || (book.uploadedAt && !book.downloadedAt)) && (
                 <button
                   aria-label={!book.uploadedAt ? _('Upload Book') : _('Download Book')}

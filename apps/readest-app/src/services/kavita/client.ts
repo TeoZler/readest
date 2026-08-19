@@ -132,7 +132,13 @@ export class KavitaClient {
     }
     let pagination: KavitaPagination;
     try {
-      pagination = JSON.parse(rawPagination) as KavitaPagination;
+      const parsed = JSON.parse(rawPagination) as Record<string, number>;
+      pagination = {
+        currentPage: parsed['currentPage'] ?? 1,
+        pageSize: parsed['pageSize'] ?? parsed['itemsPerPage'] ?? pageSize,
+        totalCount: parsed['totalCount'] ?? parsed['totalItems'] ?? items.length,
+        totalPages: parsed['totalPages'] ?? 1,
+      };
     } catch (error) {
       throw new KavitaError(
         'invalid-response',

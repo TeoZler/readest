@@ -19,7 +19,7 @@ test infrastructure must never be added to this repository.
 | --- | --- | --- |
 | Phase 0 — isolated baseline | Complete | Exact SHAs verified; submodules synchronized; `pnpm install --frozen-lockfile` passed |
 | Phase 1 — API and range proof | Complete | Non-admin Auth Key authentication, supported version, Library access, exact `206` Range, and original-file proof passed |
-| Phase 2 — connection and shelf sync | Pending | Library selection, staged pagination, and deletion safety |
+| Phase 2 — connection and shelf sync | Complete | Connection UI, explicit Library selection, staged pagination, source filters, and deletion safety |
 | Phase 3 — reading, cache, offline | Pending | foliate-js lazy read, persistent LRU cache, verified offline transfer |
 | Phase 4 — progress and credentials | Pending | Kavita-owned progress, encrypted credentials, conflict handling |
 | Phase 5 — platform acceptance | Pending | Web, Windows, and Android runtime gates |
@@ -78,3 +78,25 @@ On 2026-08-19 the product owner selected a Readest-owned random UUID named
 the Auth Key in credential replica sync, and remains stable when a device uses
 a URL override. It is explicitly not Kavita's admin-only `installId`. Kavita
 book identity is therefore `md5("kavita:" + serverId + ":" + chapterId)`.
+
+## Phase 2 verification
+
+- Connection management is available under Integrations → Kavita, including
+  classified diagnostics, explicit Library multi-selection, device URL
+  overrides, native-only invalid-certificate opt-in, immediate sync, and typed
+  server-name removal confirmation with affected-book/offline-size totals.
+- Catalog pages persist additions and metadata updates incrementally. Existing
+  rows are removed only after every selected Library page and volume request
+  succeeds; a failed later page cannot delete rows. Full offline copies become
+  orphaned instead of disappearing.
+- Kavita books carry source and availability badges and can be filtered by
+  local source, Kavita server, or Kavita Library.
+- Kavita rows and files are excluded from Readest Cloud and third-party file
+  sync. Only the encrypted connection replica participates in account sync.
+- Startup, foreground-after-15-minutes, network recovery, pull-to-refresh, and
+  explicit sync triggers are wired without reader polling.
+- Real 715-file catalog benchmark: 148 series over 3 pages at page size 50;
+  675 supported single-file EPUB chapters. Initial scan was 3482 ms and the
+  no-change scan was 3204 ms. See `BENCHMARKS.md`.
+- Targeted regression: `51` test files and `383` assertions passed; repository
+  lint and type checking passed (`2024` files checked).
