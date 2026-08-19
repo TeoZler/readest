@@ -85,6 +85,9 @@ export class KavitaConnectionRepository {
     this.storage.setItem(DEVICE_CONFIGS_KEY, JSON.stringify([...devices, device]));
     const key = authKey ?? (await this.credentials.get(config.id));
     if (key) registerKavitaRuntimeConnection({ config, device, authKey: key });
+    void import('./cover').then(({ resetKavitaCoverFailureState }) =>
+      resetKavitaCoverFailureState(config.id),
+    );
     if (options.publish !== false) {
       const { KAVITA_CONNECTION_KIND } = await import('@/services/sync/adapters/kavitaConnection');
       const { publishReplicaUpsert } = await import('@/services/sync/replicaPublish');

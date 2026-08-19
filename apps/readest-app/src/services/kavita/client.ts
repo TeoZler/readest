@@ -172,6 +172,16 @@ export class KavitaClient {
     return this.url('/api/Download/chapter', { chapterId });
   }
 
+  /**
+   * Kavita 0.9.x binds `apiKey` as a required query parameter on its image
+   * controller even when the same credential authenticates the request header.
+   * Keep this URL inside the transport layer: callers must fetch it to a Blob
+   * and must never persist it or assign it directly to an image element.
+   */
+  getChapterCoverUrl(chapterId: number): string {
+    return this.url('/api/Image/chapter-cover', { chapterId, apiKey: this.authKey });
+  }
+
   async probeChapterRange(
     chapterId: number,
     totalBytes: number,

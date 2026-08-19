@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { extractKavitaCoverBlob } from '@/services/kavita/cover';
+import {
+  extractKavitaCoverBlob,
+  fetchKavitaCoverApiBlob,
+  resetKavitaCoverFailureState,
+} from '@/services/kavita/cover';
 import {
   clearKavitaRuntimeConnections,
   registerKavitaRuntimeConnection,
@@ -13,6 +17,7 @@ const originalFetch = globalThis.fetch;
 afterEach(() => {
   globalThis.fetch = originalFetch;
   clearKavitaRuntimeConnections();
+  resetKavitaCoverFailureState();
 });
 
 const makeBook = (bytes: number): Book => ({
@@ -43,6 +48,58 @@ const makeBook = (bytes: number): Book => ({
 });
 
 describe('Kavita secure EPUB cover extraction', () => {
+  it('fetches the Kavita cover API with query and header authentication then decodes it', async () => {
+    const png = await originalFetch(
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    ).then((response) => response.arrayBuffer());
+    registerKavitaRuntimeConnection({
+      config: {
+        id: 'connection',
+        serverId: 'server',
+        name: 'Kavita',
+        defaultBaseUrl: 'https://kavita.test',
+        selectedLibraryIds: [2],
+        progressStrategy: 'ask',
+        createdAt: 1,
+        updatedAt: 1,
+      },
+      device: {
+        connectionId: 'connection',
+        allowInvalidTls: false,
+        cacheEnabled: false,
+        cacheCapacityBytes: 0,
+      },
+      authKey: 'top-secret',
+    });
+    const calls: string[] = [];
+    const result = await fetchKavitaCoverApiBlob(
+      makeBook(1234),
+      new AbortController().signal,
+      {},
+      {
+        transport: async (url, init) => {
+          calls.push(url);
+          expect(new URL(url).pathname).toBe('/api/Image/chapter-cover');
+          expect(new URL(url).searchParams.get('chapterId')).toBe('338');
+          expect(new URL(url).searchParams.get('apiKey')).toBe('top-secret');
+          expect(new Headers(init?.headers).get('x-api-key')).toBe('top-secret');
+          expect(init?.cache).toBe('no-store');
+          expect(init?.credentials).toBe('omit');
+          expect(init?.referrerPolicy).toBe('no-referrer');
+          return new Response(png.slice(0), {
+            status: 200,
+            headers: { 'Content-Type': 'image/png', ETag: 'cover-v1' },
+          });
+        },
+      },
+    );
+    expect(calls).toHaveLength(1);
+    expect(result.notModified).toBe(false);
+    expect(result.etag).toBe('cover-v1');
+    expect(result.blob?.type).toBe('image/png');
+    expect(result.blob?.size).toBeGreaterThan(0);
+  });
+
   it('decodes a visible cover from strict authenticated ranges without putting the key in a URL', async () => {
     const source = new Uint8Array(await (await originalFetch(EPUB_URL)).arrayBuffer());
     const ranges: Array<{ start: number; end: number }> = [];

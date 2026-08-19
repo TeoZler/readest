@@ -13,6 +13,12 @@ import { redactKavitaSecret } from '@/services/kavita/redaction';
 import type { KavitaConnectionConfig } from '@/services/kavita/types';
 import { clearKavitaRangeCache, getKavitaRangeCacheBytes } from '@/services/kavita/rangeCache';
 import { clearKavitaCoverUrls, deleteStoredKavitaCovers } from '@/services/kavita/cover';
+import {
+  clearKavitaCoverCache,
+  getKavitaCoverCacheBytes,
+  getKavitaCoverCacheSettings,
+  saveKavitaCoverCacheSettings,
+} from '@/services/kavita/coverCache';
 import { eventDispatcher } from '@/utils/event';
 import { getLocalBookFilename } from '@/utils/book';
 import SubPageHeader from '../SubPageHeader';
@@ -42,6 +48,8 @@ const KavitaForm: React.FC<KavitaFormProps> = ({ onBack, onConnectionsChanged })
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [cacheBytes, setCacheBytes] = useState<Record<string, number>>({});
+  const [coverCacheSettings, setCoverCacheSettings] = useState(getKavitaCoverCacheSettings);
+  const [coverCacheBytes, setCoverCacheBytes] = useState(0);
 
   useEffect(() => {
     void Promise.all(
@@ -51,6 +59,14 @@ const KavitaForm: React.FC<KavitaFormProps> = ({ onBack, onConnectionsChanged })
       ),
     ).then((entries) => setCacheBytes(Object.fromEntries(entries)));
   }, [connections]);
+
+  useEffect(() => {
+    void envConfig
+      .getAppService()
+      .then(getKavitaCoverCacheBytes)
+      .then(setCoverCacheBytes)
+      .catch(() => setCoverCacheBytes(0));
+  }, [envConfig]);
 
   const refreshConnections = () => {
     setConnections(repository?.list() ?? []);
@@ -192,6 +208,49 @@ const KavitaForm: React.FC<KavitaFormProps> = ({ onBack, onConnectionsChanged })
       {connections.length > 0 && (
         <div className='mb-6 space-y-2'>
           <SectionTitle>{_('Connected Servers')}</SectionTitle>
+          <div className='card eink-bordered border-base-200 bg-base-100 flex flex-wrap items-end gap-3 border p-4'>
+            <label className='flex items-center gap-2 text-sm'>
+              <input
+                type='checkbox'
+                className='checkbox checkbox-sm'
+                checked={coverCacheSettings.enabled}
+                onChange={(event) => {
+                  const next = { ...coverCacheSettings, enabled: event.target.checked };
+                  setCoverCacheSettings(next);
+                  saveKavitaCoverCacheSettings(next);
+                }}
+              />
+              {_('Persistent cover cache')}
+            </label>
+            <label className='text-sm'>
+              <span className='text-base-content/70 me-2'>{_('Global limit (MiB)')}</span>
+              <input
+                type='number'
+                min={0}
+                className='input input-bordered h-9 w-28'
+                value={Math.round(coverCacheSettings.capacityBytes / 1024 / 1024)}
+                onChange={(event) => {
+                  const next = {
+                    ...coverCacheSettings,
+                    capacityBytes: Math.max(0, Number(event.target.value) || 0) * 1024 * 1024,
+                  };
+                  setCoverCacheSettings(next);
+                  saveKavitaCoverCacheSettings(next);
+                }}
+              />
+            </label>
+            <button
+              type='button'
+              className='btn btn-sm'
+              onClick={async () => {
+                clearKavitaCoverUrls();
+                await clearKavitaCoverCache(await envConfig.getAppService());
+                setCoverCacheBytes(0);
+              }}
+            >
+              {_('Clear cover cache')} ({(coverCacheBytes / 1024 / 1024).toFixed(1)} MiB)
+            </button>
+          </div>
           {connections.map((connection) => {
             const device = repository?.getDeviceConfig(connection.id);
             return (

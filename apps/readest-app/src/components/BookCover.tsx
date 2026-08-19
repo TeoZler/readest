@@ -97,7 +97,7 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
           setVisibleKavitaCoverKey(kavitaCoverKey);
           observer.disconnect();
         },
-        { rootMargin: '50% 0px' },
+        { rootMargin: '200% 0px' },
       );
       observer.observe(element);
       return () => observer.disconnect();
@@ -116,7 +116,6 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
         .catch((error) => {
           if (!active || (error instanceof DOMException && error.name === 'AbortError')) return;
           setKavitaCoverUrl(null);
-          console.warn('[Kavita] EPUB cover unavailable', error);
         });
       return () => {
         active = false;

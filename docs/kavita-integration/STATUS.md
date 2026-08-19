@@ -23,6 +23,7 @@ test infrastructure must never be added to this repository.
 | Phase 3 — reading, cache, offline | Complete | Strict lazy foliate-js open, persistent LRU cache, verified queued offline transfer |
 | Phase 4 — progress and credentials | Complete | Kavita-owned progress, encrypted credentials, conflict handling and offline queue |
 | Phase 5 — platform acceptance | Complete | Full Web/Windows/Android checks and real Android Kavita runtime acceptance passed; Web remains explicitly conditional |
+| Corrective API cover path | Implementation complete; runtime reacceptance pending | API-first Blob loading, global cover cache, retry/cooldown and classified EPUB fallback implemented; targeted unit and Chromium tests pass |
 
 ## Phase 0 verification
 
@@ -219,3 +220,35 @@ Corrective evidence on 2026-08-19:
   Rust (`89/89`), Windows Tauri WebDriver (`113` passed, `1` skipped), Web
   production build, Windows release `--no-bundle`, and the final Android x86_64
   debug build plus runtime inspection.
+
+### API-first follow-up
+
+The product owner subsequently accepted the performance tradeoff of placing
+the Auth Key in Kavita's required image-controller query parameter, provided
+the URL remains private to the transport layer. D-002 is therefore superseded
+by D-003. The new implementation:
+
+- sends the real key in both `apiKey` and `x-api-key`, then validates and
+  decodes a maximum 16 MiB image Blob;
+- limits work to six concurrent requests and the viewport plus a two-screen
+  margin;
+- retries transient responses three times, applies connection-level cooldown,
+  and emits at most one authentication/permission notice per server;
+- stores validated covers in a separate device-global `KavitaCoverCache`
+  namespace with a default 1 GiB LRU budget and 24-hour revalidation;
+- retains the old authenticated EPUB extraction only for the locked fallback
+  matrix and complete local offline EPUBs.
+
+Targeted implementation checks on 2026-08-19:
+
+- TypeScript type check: passed.
+- Unit tests: cover retry/auth/304, persistent versioning/global LRU/clear, and
+  BookCover lifecycle — `3` files, `12` assertions passed.
+- Chromium browser test: the API request included both credential locations,
+  returned a Blob that decoded with positive dimensions, and the existing
+  strict-Range extraction fallback still decoded the real EPUB cover — `2`
+  assertions passed.
+
+The former Range-extraction Android measurements are historical evidence, not
+acceptance evidence for D-003. Fresh Android and Windows performance/runtime
+measurements remain mandatory before release.
