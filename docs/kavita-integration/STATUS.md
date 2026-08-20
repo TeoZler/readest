@@ -420,6 +420,15 @@ Release-pipeline evidence on 2026-08-19:
   lacked the CLI options server required by `xcode-script`. The iOS job now
   uses Tauri's supported `ios build --ci --no-sign` path, inspects the generated
   IPA identity, and preserves the unsigned-distribution boundary.
+- The same third matrix built and reported the signed universal Android APK but
+  the Tauri wrapper returned non-zero immediately afterward. The clean-runner
+  job now accepts that recovery only when a fresh non-empty APK exists; the
+  following gate still rejects any wrong package, version, label, Billing
+  permission or signing certificate. The arm64 flavor is then packaged from
+  the already-built JNI libraries with Gradle while explicitly skipping only
+  the duplicate `rustBuildArm64Release` task instead of repeating the full
+  frontend and four-ABI Rust build. That exact Gradle path completed locally
+  (`631` tasks, `49` executed) and produced the arm64 release variant.
 - Android Gradle tests completed all configured ABI/flavor tasks (`851`
   actionable, `604` executed). Release signing accepts separate store and key
   passwords while retaining the old single-password format for local

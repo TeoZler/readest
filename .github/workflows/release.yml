@@ -431,13 +431,21 @@ jobs:
           set -euo pipefail
           version='${{ needs.metadata.outputs.version }}'
           mkdir -p "$GITHUB_WORKSPACE/release"
-          pnpm tauri android build --apk --ci
-          universal='src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk'
-          test -s "$universal"
+          # Tauri 2 can return a non-zero status after Gradle has successfully
+          # emitted the APK. A clean runner has no stale output, and the next
+          # step independently verifies identity and the pinned certificate.
+          if ! pnpm tauri android build --apk --ci; then
+            echo 'Tauri returned non-zero; accepting only a fresh, verifiable APK.' >&2
+          fi
+          universal=$(find src-tauri/gen/android/app/build/outputs/apk/universal/release -type f -name '*.apk' -print -quit)
+          test -n "$universal" && test -s "$universal"
           cp "$universal" "$GITHUB_WORKSPACE/release/Readest-Remote_${version}_android-universal.apk"
-          pnpm tauri android build --apk --ci --target aarch64
-          arm64='src-tauri/gen/android/app/build/outputs/apk/arm64/release/app-arm64-release.apk'
-          test -s "$arm64"
+          # The universal build has already compiled and staged every JNI ABI;
+          # package the arm64 flavor directly instead of rebuilding Next/Rust.
+          src-tauri/gen/android/gradlew -p src-tauri/gen/android :app:assembleArm64Release \
+            -x :app:rustBuildArm64Release --no-daemon
+          arm64=$(find src-tauri/gen/android/app/build/outputs/apk/arm64/release -type f -name '*.apk' -print -quit)
+          test -n "$arm64" && test -s "$arm64"
           cp "$arm64" "$GITHUB_WORKSPACE/release/Readest-Remote_${version}_android-arm64.apk"
       - name: Run Gradle tests and verify APK identity
         shell: bash

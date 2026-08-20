@@ -63,6 +63,9 @@ describe('Readest Remote release workflow', () => {
     expect(workflow).toContain('ANDROID_RELEASE_CERT_SHA256');
     expect(workflow).toContain('pnpm tauri android init');
     expect(workflow).toContain('pnpm tauri icon ../../data/icons/readest-book.png');
+    expect(workflow).toContain(':app:assembleArm64Release');
+    expect(workflow).toContain('-x :app:rustBuildArm64Release --no-daemon');
+    expect(workflow).toContain('accepting only a fresh, verifiable APK');
     expect(workflow).toContain('pnpm tauri ios build --ci --no-sign');
     expect(workflow).not.toContain('xcodebuild archive');
     expect(workflow).toContain("NEXT_PUBLIC_PORTABLE_APP: 'true'");
