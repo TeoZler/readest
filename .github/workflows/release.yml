@@ -488,36 +488,31 @@ jobs:
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           key: ios-arm64
-      - name: Install dependencies and build frontend
+      - name: Install dependencies
         run: |
           pnpm install --frozen-lockfile --prefer-offline
           pnpm --filter @readest/readest-app setup-vendors
-          pnpm --filter @readest/readest-app build
       - name: Build unsigned iOS archive
+        working-directory: apps/readest-app
         shell: bash
         run: |
           set -euo pipefail
-          project='apps/readest-app/src-tauri/gen/apple/Readest.xcodeproj'
-          archive="$RUNNER_TEMP/ReadestRemote.xcarchive"
-          xcodebuild archive \
-            -project "$project" \
-            -scheme Readest_iOS \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath "$archive" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY='' \
-            DEVELOPMENT_TEAM=''
-          app=$(find "$archive/Products/Applications" -maxdepth 1 -type d -name '*.app' -print -quit)
+          # The Xcode build phase asks the Tauri CLI options server for its
+          # release configuration. A direct xcodebuild invocation cannot
+          # provide that server, so use Tauri's supported unsigned path.
+          pnpm tauri ios build --ci --no-sign
+          ipa=$(find src-tauri/gen/apple/build -type f -name '*.ipa' -print -quit)
+          test -s "$ipa"
+          stage="$RUNNER_TEMP/ipa-inspect"
+          mkdir -p "$stage"
+          unzip -q "$ipa" -d "$stage"
+          app=$(find "$stage/Payload" -maxdepth 1 -type d -name '*.app' -print -quit)
           test -n "$app"
           info="$app/Info.plist"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$info")" = 'io.github.wenhe233.readestremote'
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$info")" = '${{ needs.metadata.outputs.version }}'
-          stage="$RUNNER_TEMP/ipa-stage"
-          mkdir -p "$stage/Payload" release
-          cp -R "$app" "$stage/Payload/"
-          (cd "$stage" && zip -qr "$GITHUB_WORKSPACE/release/Readest-Remote_${{ needs.metadata.outputs.version }}_ios-arm64.ipa" Payload)
+          mkdir -p "$GITHUB_WORKSPACE/release"
+          cp "$ipa" "$GITHUB_WORKSPACE/release/Readest-Remote_${{ needs.metadata.outputs.version }}_ios-arm64.ipa"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ios-arm64

@@ -63,6 +63,8 @@ describe('Readest Remote release workflow', () => {
     expect(workflow).toContain('ANDROID_RELEASE_CERT_SHA256');
     expect(workflow).toContain('pnpm tauri android init');
     expect(workflow).toContain('pnpm tauri icon ../../data/icons/readest-book.png');
+    expect(workflow).toContain('pnpm tauri ios build --ci --no-sign');
+    expect(workflow).not.toContain('xcodebuild archive');
     expect(workflow).toContain("NEXT_PUBLIC_PORTABLE_APP: 'true'");
     expect(workflow).toContain('test -s apps/readest-app/out/sw.js');
     expect(workflow).not.toContain('TAURI_SIGNING_PRIVATE_KEY');

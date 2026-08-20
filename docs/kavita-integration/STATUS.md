@@ -414,6 +414,12 @@ Release-pipeline evidence on 2026-08-19:
   now accepts only `readest-remote`, Discord presence stays disabled unless a
   Remote-owned `READEST_REMOTE_DISCORD_APP_ID` is supplied, and the visible
   update link points to this fork's GitHub Releases page.
+- The third no-Release matrix (`32369455819`) confirmed that the Widget plist,
+  Android scaffold and Windows ARM64 Node fixes pass their former failure
+  points. Its direct iOS `xcodebuild` then reached Tauri's Rust build phase but
+  lacked the CLI options server required by `xcode-script`. The iOS job now
+  uses Tauri's supported `ios build --ci --no-sign` path, inspects the generated
+  IPA identity, and preserves the unsigned-distribution boundary.
 - Android Gradle tests completed all configured ABI/flavor tasks (`851`
   actionable, `604` executed). Release signing accepts separate store and key
   passwords while retaining the old single-password format for local
