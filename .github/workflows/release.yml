@@ -186,6 +186,9 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6
         with:
           node-version: ${{ env.NODE_VERSION }}
+          # workerd has no win32-arm64 postinstall package. The hosted ARM64
+          # runner supports x64 Node emulation while Rust still targets ARM64.
+          architecture: x64
           cache: pnpm
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
@@ -388,6 +391,17 @@ jobs:
         run: |
           pnpm install --frozen-lockfile --prefer-offline
           pnpm --filter @readest/readest-app setup-vendors
+      - name: Initialize Android project
+        working-directory: apps/readest-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Only customized Android files are tracked. Generate the Gradle
+          # scaffold on a clean runner, then restore Remote customizations.
+          rm -rf src-tauri/gen/android
+          pnpm tauri android init
+          pnpm tauri icon ../../data/icons/readest-book.png
+          git checkout .
       - name: Configure Readest Remote release signing
         shell: bash
         env:

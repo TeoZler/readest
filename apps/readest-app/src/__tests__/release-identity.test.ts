@@ -55,6 +55,8 @@ describe('Readest Remote release identity', () => {
   it('derives Apple containers, extensions, and keychain services from the new id', () => {
     const info = read('src-tauri/Info-ios.plist');
     const project = read('src-tauri/gen/apple/project.yml');
+    const widgetInfo = read('src-tauri/gen/apple/ReadestWidget/Info.plist');
+    const safariAuth = read('src-tauri/src/macos/safari_auth.rs');
     const bridge = read(
       'src-tauri/plugins/tauri-plugin-native-bridge/ios/Sources/NativeBridgePlugin.swift',
     );
@@ -64,6 +66,11 @@ describe('Readest Remote release identity', () => {
     expect(project).toContain('io.github.wenhe233.readestremote.ShareExtension');
     expect(project).toContain('io.github.wenhe233.readestremote.ReadestWidget');
     expect(project).not.toContain('DEVELOPMENT_TEAM:');
+    expect(widgetInfo).toContain('<string>Readest Remote</string>');
+    expect(widgetInfo).toContain('<string>0.12.1-r1</string>');
+    expect(widgetInfo).toContain('<string>12001001</string>');
+    expect(safariAuth).toContain('NSString::from_str("readest-remote")');
+    expect(safariAuth).not.toContain('NSString::from_str("readest")');
     expect(tauri.bundle.iOS?.developmentTeam).toBeUndefined();
     expect(bridge).toContain('io.github.wenhe233.readestremote.sync-passphrase');
     expect(bridge).toContain('io.github.wenhe233.readestremote.secure-items');
@@ -100,12 +107,21 @@ describe('Readest Remote release identity', () => {
     const constants = read('src/services/constants.ts');
     const posthog = read('src/context/PHContext.tsx');
     const build = read('src-tauri/build.rs');
+    const updaterWindow = read('src/components/UpdaterWindow.tsx');
+    const discord = read('src-tauri/src/discord_rpc.rs');
     expect(constants).not.toContain('download.readest.com');
     expect(constants).not.toContain('github.com/readest/readest/releases');
     expect(posthog).not.toMatch(/phc_[A-Za-z0-9]+/);
     expect(posthog).toContain('NEXT_PUBLIC_REMOTE_POSTHOG_KEY');
     expect(build).toContain('READEST_REMOTE_SENTRY_DSN');
     expect(build).not.toContain('env::var("SENTRY_DSN")');
+    expect(updaterWindow).toContain('WenHe233/readest-remote/releases');
+    expect(updaterWindow).not.toContain('apps.apple.com');
+    expect(updaterWindow).not.toContain('play.google.com');
+    expect(discord).toContain('READEST_REMOTE_DISCORD_APP_ID');
+    expect(discord).toContain('Read on Readest Remote');
+    expect(discord).not.toContain('1462683110612144348');
+    expect(discord).not.toContain('web.readest.com');
   });
 
   it('publishes a distinct Linux desktop identity', () => {

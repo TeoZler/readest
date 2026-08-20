@@ -4,7 +4,7 @@ use serde::Deserialize;
 use std::sync::{Arc, Mutex};
 use tauri::State;
 
-const DISCORD_APP_ID: &str = "1462683110612144348";
+const DISCORD_APP_ID: Option<&str> = option_env!("READEST_REMOTE_DISCORD_APP_ID");
 const MAX_TITLE_LENGTH: usize = 128;
 const MAX_AUTHOR_LENGTH: usize = 128;
 
@@ -27,7 +27,9 @@ impl DiscordRpcClient {
             return Ok(());
         }
 
-        let mut client = DiscordIpcClient::new(DISCORD_APP_ID);
+        let app_id = DISCORD_APP_ID
+            .ok_or_else(|| "Readest Remote Discord integration is not configured".to_string())?;
+        let mut client = DiscordIpcClient::new(app_id);
         match client.connect() {
             Ok(_) => {
                 log::info!("Successfully connected to Discord");
@@ -119,7 +121,10 @@ pub async fn update_book_presence(
 
     activity_builder = activity_builder.assets(assets_builder);
 
-    let button = activity::Button::new("Read on Readest", "https://web.readest.com");
+    let button = activity::Button::new(
+        "Read on Readest Remote",
+        "https://github.com/WenHe233/readest-remote",
+    );
     activity_builder = activity_builder.buttons(vec![button]);
 
     if let Some(ref mut discord_client) = client.client {

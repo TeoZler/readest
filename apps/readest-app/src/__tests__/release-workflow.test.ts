@@ -58,8 +58,11 @@ describe('Readest Remote release workflow', () => {
     const workflow = read('../../.github/workflows/release.yml');
     expect(workflow).toContain('windows-11-arm');
     expect(workflow).toContain('ubuntu-24.04-arm');
+    expect(workflow).toContain('architecture: x64');
     expect(workflow).toContain('ANDROID_RELEASE_KEYSTORE_BASE64');
     expect(workflow).toContain('ANDROID_RELEASE_CERT_SHA256');
+    expect(workflow).toContain('pnpm tauri android init');
+    expect(workflow).toContain('pnpm tauri icon ../../data/icons/readest-book.png');
     expect(workflow).toContain("NEXT_PUBLIC_PORTABLE_APP: 'true'");
     expect(workflow).toContain('test -s apps/readest-app/out/sw.js');
     expect(workflow).not.toContain('TAURI_SIGNING_PRIVATE_KEY');

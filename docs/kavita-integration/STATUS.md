@@ -47,12 +47,17 @@ Results on 2026-08-19:
 
 ## Current blockers
 
-- The no-Release GitHub Actions matrix has not run. Apple, Linux, Windows
-  ARM64, Android release signing, unsigned iOS packaging and KOReader/LuaJIT
-  therefore remain CI-only hard gates.
-- A stable Readest Remote Android release keystore and GitHub Secrets have not
-  been created. This intentionally waits until the product owner can save the
-  one-time recovery password and confirm it before any release attempt.
+- The second no-Release GitHub Actions matrix (`32366200061`) is in progress.
+  Its Web, browser, KOReader/LuaJIT, Calibre, Rust/Tauri and Web-components
+  gates passed. Clean runners exposed three packaging gaps: Windows ARM64 used
+  an unsupported native Node/workerd combination, iOS lacked the Widget
+  `Info.plist`, and Android did not regenerate its ignored Gradle scaffold.
+  All three fixes and regression assertions are complete locally; a replacement
+  matrix remains required after the current run finishes collecting evidence.
+- The stable Readest Remote Android release keystore exists outside every Git
+  repository in an encrypted recovery archive. The product owner confirmed
+  saving its recovery password, all five GitHub signing Secrets are configured,
+  and local fresh-install plus same-certificate upgrade acceptance passed.
 - Readest account/cloud login under the new callback identity has not been
   validated with an account. Google Drive is disabled unless a Remote-owned
   OAuth client is explicitly supplied; the fork no longer embeds or registers
@@ -394,6 +399,21 @@ Release-pipeline evidence on 2026-08-19:
   cause was confirmed. All eight test/build jobs that consume the frontend now
   execute the idempotent `setup-vendors` step; workflow tests assert the full
   coverage and `actionlint` passes before the replacement matrix.
+- The replacement matrix (`32366200061`) passed the complete Web gate (including
+  KOReader/LuaJIT and Calibre), Web-components packaging, Rust/Tauri tests,
+  both Linux architectures, the unsigned universal macOS DMG, and the Windows
+  x64 NSIS/portable builds.
+  Its clean-runner failures identified three reproducibility gaps rather than
+  product test failures: Windows ARM64 needs x64 Node emulation because workerd
+  has no Windows ARM64 package, the generated Apple project references an
+  omitted Widget `Info.plist`, and Android must run `tauri android init` before
+  restoring tracked Remote customizations and signing. The fixes have targeted
+  workflow/identity regression coverage and await the next matrix.
+- A final release-identity sweep removed the upstream macOS Safari callback,
+  official Discord application ID and official Apple/Google store URLs. Safari
+  now accepts only `readest-remote`, Discord presence stays disabled unless a
+  Remote-owned `READEST_REMOTE_DISCORD_APP_ID` is supplied, and the visible
+  update link points to this fork's GitHub Releases page.
 - Android Gradle tests completed all configured ABI/flavor tasks (`851`
   actionable, `604` executed). Release signing accepts separate store and key
   passwords while retaining the old single-password format for local
@@ -413,12 +433,8 @@ Release-pipeline evidence on 2026-08-19:
 
 Remaining hard gates before the release tag:
 
-- Run the KOReader syntax/tests in CI or another environment with LuaJIT; the
-  Windows host has no LuaJIT and the local scripts therefore reported a skip.
-- Run Apple, Linux ARM64/x64, Windows ARM64, Android release-signing and iOS
-  unsigned-IPA jobs in the no-Release Actions matrix.
-- Generate the stable Remote Android keystore only after the product owner can
-  save and confirm the one-time recovery password, then configure the release
-  Secrets and prove an upgrade signed by that certificate.
+- Complete a no-Release matrix with every platform build and aggregation job
+  green after the clean-runner fixes. KOReader/LuaJIT, Calibre, Web, browser,
+  Rust/Tauri and Web-components gates have already passed on hosted runners.
 - Validate account/cloud login with an account under the new callback identity;
   Google Drive stays disabled until a Remote-owned OAuth client is supplied.

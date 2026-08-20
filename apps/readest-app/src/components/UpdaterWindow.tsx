@@ -603,27 +603,14 @@ export const UpdaterContent = ({
 
                 {changelogs.length > 0 && semver.gt(changelogs[0]!.version, currentVersion) ? (
                   <div className='flex gap-2'>
-                    {(appService?.isIOSApp || appService?.isMacOSApp) && (
-                      <Link
-                        href='https://apps.apple.com/app/id6738622779'
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        className='btn btn-primary btn-sm'
-                      >
-                        {_('Check Update')}
-                      </Link>
-                    )}
-
-                    {appService?.isAndroidApp && (
-                      <Link
-                        href='https://play.google.com/store/apps/details?id=com.bilingify.readest'
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        className='btn btn-primary btn-sm'
-                      >
-                        {_('Check Update')}
-                      </Link>
-                    )}
+                    <Link
+                      href='https://github.com/WenHe233/readest-remote/releases'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='btn btn-primary btn-sm'
+                    >
+                      {_('Check Update')}
+                    </Link>
                   </div>
                 ) : (
                   <div className='flex'>
