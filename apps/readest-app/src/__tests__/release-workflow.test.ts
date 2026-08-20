@@ -46,6 +46,10 @@ describe('Readest Remote release workflow', () => {
     expect(workflow).toContain('build-macos');
     expect(workflow).toContain('build-android');
     expect(workflow).toContain('build-ios');
+    expect(workflow).toContain(
+      "$windowsVersion = $env:RELEASE_VERSION -replace '-r([0-9]+)$', '-$1'",
+    );
+    expect(workflow).toContain('$info.ProductVersion -ne $windowsVersion');
     expect(workflow).toContain('(cd release && sha256sum --check SHA256SUMS.txt)');
   });
 

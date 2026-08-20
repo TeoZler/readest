@@ -211,7 +211,8 @@ jobs:
           $installer = Get-ChildItem (Join-Path $root 'bundle/nsis') -Filter '*-setup.exe' | Select-Object -First 1
           if (-not (Test-Path $binary) -or -not $installer) { throw 'Windows bundle output missing' }
           $info = (Get-Item $binary).VersionInfo
-          if ($info.ProductName -ne 'Readest Remote' -or $info.ProductVersion -ne $env:RELEASE_VERSION) {
+          $windowsVersion = $env:RELEASE_VERSION -replace '-r([0-9]+)$', '-$1'
+          if ($info.ProductName -ne 'Readest Remote' -or $info.ProductVersion -ne $windowsVersion) {
             throw "Unexpected Windows identity: $($info.ProductName) $($info.ProductVersion)"
           }
           Copy-Item $installer.FullName "release/Readest-Remote_${env:RELEASE_VERSION}_windows-${env:RELEASE_ARCH}-setup.exe"

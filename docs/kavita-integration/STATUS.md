@@ -22,8 +22,8 @@ test infrastructure must never be added to this repository.
 | Phase 2 — connection and shelf sync | Complete | Connection UI, explicit Library selection, staged pagination, source filters, and deletion safety |
 | Phase 3 — reading, cache, offline | Complete | Strict lazy foliate-js open, persistent LRU cache, verified queued offline transfer |
 | Phase 4 — progress and credentials | Complete | Kavita-owned progress, encrypted credentials, conflict handling and offline queue |
-| Phase 5 — platform acceptance | Reopened | The original reader/offline gates passed, but the later API-cover requirement exposed a missed visual defect and a still-failing Android cover-performance gate |
-| Corrective API cover path | Functional pass; performance gate failed | API-first native Blob loading, device cache, retry/cooldown and classified EPUB fallback work on Android; cold first-cover and first-screen timings remain above the locked limits |
+| Phase 5 — platform acceptance | Local pass; CI matrix pending | Reader/offline, API-cover correctness, Android runtime, Windows side-by-side identity and local regression gates passed; cross-platform hosted builds remain pending |
+| Corrective API cover path | Accepted | API-first native Blob loading, device cache, retry/cooldown and classified EPUB fallback work on Android; measured cold-start latency is retained as a known limitation rather than a release gate |
 
 ## Phase 0 verification
 
@@ -47,13 +47,6 @@ Results on 2026-08-19:
 
 ## Current blockers
 
-- Android API-first cover performance is not accepted. On the API 36 x86_64
-  emulator the final isolated cold run decoded the first cover in `7711 ms`
-  and only 11 covers within the 15-second observation window, versus the
-  locked first-cover `1500 ms` / first-12 `5000 ms` limits.
-  Functional evidence is clean (one image API GET per book, no EPUB Range or
-  full-file response), but a functional pass does not waive the performance
-  gate.
 - The no-Release GitHub Actions matrix has not run. Apple, Linux, Windows
   ARM64, Android release signing, unsigned iOS packaging and KOReader/LuaJIT
   therefore remain CI-only hard gates.
@@ -291,8 +284,15 @@ source under the probe. The first Blob cover decoded in `7711 ms`; only 11
 decoded within 15 seconds, so the first-12 result did not reach the locked
 `5000 ms` gate. Native metrics showed response/network time as the dominant
 cost (up to about `8.0 s` for an individual request), while Base64 decode was
-`0–4 ms` for the measured completions. A fresh Windows API-first cover
-benchmark also remains mandatory before release.
+`0–4 ms` for the measured completions.
+
+On 2026-08-20 the product owner explicitly changed cover timing from a hard
+release gate to a best-effort target: retain the stable API-first path and any
+safe latency reductions, but do not block V1 when the original loading behavior
+is required. The clean functional evidence remains mandatory. The measurements
+above are therefore recorded as a known emulator/network limitation; a fresh
+Windows timing run is useful diagnostic evidence but is no longer required for
+the release tag.
 
 ## Readest Remote release identity
 
@@ -383,6 +383,11 @@ Release-pipeline evidence on 2026-08-19:
 - Windows setup and portable artifacts are distinct builds. The portable pass
   compiles with `NEXT_PUBLIC_PORTABLE_APP=true`; it is not a renamed copy of
   the installed-mode binary.
+- The Windows artifact inspector maps public revision `0.12.1-r1` to the
+  Windows-internal numeric `0.12.1-1` before checking PE metadata, while all
+  uploaded filenames retain `0.12.1-r1`. The exact CI Clippy command now passes
+  with warnings denied and no product-code allowance; IPv6 private/link-local
+  URL checks remain compatible with the declared Rust `1.77.2` MSRV.
 - Android Gradle tests completed all configured ABI/flavor tasks (`851`
   actionable, `604` executed). Release signing accepts separate store and key
   passwords while retaining the old single-password format for local
@@ -402,9 +407,6 @@ Release-pipeline evidence on 2026-08-19:
 
 Remaining hard gates before the release tag:
 
-- Meet the API-first cover timing limits on Android and run the corresponding
-  fresh Windows benchmark. The current Android functional result is not fast
-  enough to accept.
 - Run the KOReader syntax/tests in CI or another environment with LuaJIT; the
   Windows host has no LuaJIT and the local scripts therefore reported a skip.
 - Run Apple, Linux ARM64/x64, Windows ARM64, Android release-signing and iOS

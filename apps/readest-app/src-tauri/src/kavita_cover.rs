@@ -88,7 +88,10 @@ fn is_safe_base_url(value: &str) -> bool {
     match host.parse::<IpAddr>() {
         Ok(IpAddr::V4(ip)) => ip.is_private() || ip.is_loopback() || ip.is_link_local(),
         Ok(IpAddr::V6(ip)) => {
-            ip.is_loopback() || ip.is_unique_local() || ip.is_unicast_link_local()
+            let octets = ip.octets();
+            let unique_local = octets[0] & 0xfe == 0xfc;
+            let unicast_link_local = octets[0] == 0xfe && octets[1] & 0xc0 == 0x80;
+            ip.is_loopback() || unique_local || unicast_link_local
         }
         Err(_) => false,
     }
@@ -286,11 +289,16 @@ mod tests {
         assert!(is_safe_base_url("http://127.0.0.1:5000"));
         assert!(is_safe_base_url("http://192.168.1.10:5000/kavita"));
         assert!(is_safe_base_url("http://reader.local:5000"));
+        assert!(is_safe_base_url("http://[fc00::1]:5000"));
+        assert!(is_safe_base_url("http://[fe80::1]:5000"));
         assert!(is_safe_base_url("https://books.example.com"));
+        assert!(!is_safe_base_url("http://[2001:db8::1]:5000"));
         assert!(!is_safe_base_url("http://books.example.com"));
         assert!(!is_safe_base_url("ftp://192.168.1.10/file"));
         assert!(!is_safe_base_url("https://user:secret@books.example.com"));
-        assert!(!is_safe_base_url("https://books.example.com/#apiKey=secret"));
+        assert!(!is_safe_base_url(
+            "https://books.example.com/#apiKey=secret"
+        ));
     }
 
     #[test]
