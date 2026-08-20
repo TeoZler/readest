@@ -50,6 +50,7 @@ describe('Readest Remote release workflow', () => {
       "$windowsVersion = $env:RELEASE_VERSION -replace '-r([0-9]+)$', '-$1'",
     );
     expect(workflow).toContain('$info.ProductVersion -ne $windowsVersion');
+    expect(workflow.match(/pnpm --filter @readest\/readest-app setup-vendors/g)).toHaveLength(8);
     expect(workflow).toContain('(cd release && sha256sum --check SHA256SUMS.txt)');
   });
 

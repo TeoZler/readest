@@ -388,6 +388,12 @@ Release-pipeline evidence on 2026-08-19:
   uploaded filenames retain `0.12.1-r1`. The exact CI Clippy command now passes
   with warnings denied and no product-code allowance; IPv6 private/link-local
   URL checks remain compatible with the declared Rust `1.77.2` MSRV.
+- The first no-Release matrix (`32365718003`) exposed a clean-runner gap:
+  Android, Windows and macOS reached the frontend build without generated
+  PDF.js/SimpleCC/Jieba vendor files. The run was cancelled after the shared
+  cause was confirmed. All eight test/build jobs that consume the frontend now
+  execute the idempotent `setup-vendors` step; workflow tests assert the full
+  coverage and `actionlint` passes before the replacement matrix.
 - Android Gradle tests completed all configured ABI/flavor tasks (`851`
   actionable, `604` executed). Release signing accepts separate store and key
   passwords while retaining the old single-password format for local
