@@ -420,6 +420,11 @@ Release-pipeline evidence on 2026-08-19:
   lacked the CLI options server required by `xcode-script`. The iOS job now
   uses Tauri's supported `ios build --ci --no-sign` path, inspects the generated
   IPA identity, and preserves the unsigned-distribution boundary.
+- The fourth no-Release matrix (`32373607448`) showed that `ios build` also
+  requires the ignored generated main-app `Readest_iOS/Info.plist`. The iOS job
+  now recreates the complete Apple scaffold with `ios init --ci`, restores the
+  tracked Remote project/extension customizations, and only then invokes the
+  Tauri unsigned build.
 - The same third matrix built and reported the signed universal Android APK but
   the Tauri wrapper returned non-zero immediately afterward. The clean-runner
   job now accepts that recovery only when a fresh non-empty APK exists; the

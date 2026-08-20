@@ -500,6 +500,16 @@ jobs:
         run: |
           pnpm install --frozen-lockfile --prefer-offline
           pnpm --filter @readest/readest-app setup-vendors
+      - name: Initialize iOS project
+        working-directory: apps/readest-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The generated base Info.plist is intentionally ignored. Recreate
+          # the Apple scaffold, then restore tracked Remote customizations.
+          rm -rf src-tauri/gen/apple
+          pnpm tauri ios init --ci --skip-targets-install
+          git checkout .
       - name: Build unsigned iOS archive
         working-directory: apps/readest-app
         shell: bash
