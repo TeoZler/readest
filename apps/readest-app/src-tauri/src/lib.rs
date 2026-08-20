@@ -27,6 +27,7 @@ mod dir_scanner;
 #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
 mod discord_rpc;
 mod epub_parser;
+mod kavita_cover;
 #[cfg(target_os = "macos")]
 mod macos;
 mod mobi_parser;
@@ -375,6 +376,7 @@ pub fn run() {
     });
 
     let builder = tauri::Builder::default()
+        .manage(kavita_cover::KavitaCoverFetchState::default())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
@@ -392,6 +394,8 @@ pub fn run() {
             get_environment_variable,
             get_executable_dir,
             set_webview_info,
+            kavita_cover::fetch_kavita_cover,
+            kavita_cover::cancel_kavita_cover_fetch,
             #[cfg(desktop)]
             is_updater_disabled,
             allow_paths_in_scopes,

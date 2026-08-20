@@ -76,7 +76,7 @@
     },
     "fileAssociations": [
       {
-        "name": "EPUB Document",
+        "name": "Readest Remote EPUB Document",
         "ext": ["epub"],
         "contentTypes": ["org.idpf.epub-container"],
         "description": "EPUB file",
@@ -85,7 +85,7 @@
         "rank": "Alternate"
       },
       {
-        "name": "MOBI Document",
+        "name": "Readest Remote MOBI Document",
         "ext": ["mobi"],
         "contentTypes": ["org.mobipocket.mobi"],
         "description": "MOBI file",
@@ -94,7 +94,7 @@
         "rank": "Alternate"
       },
       {
-        "name": "AZW Document",
+        "name": "Readest Remote AZW Document",
         "ext": ["azw"],
         "contentTypes": ["com.amazon.azw", "com.amazon.azw3"],
         "description": "AZW file",
@@ -103,7 +103,7 @@
         "rank": "Alternate"
       },
       {
-        "name": "AZW Document",
+        "name": "Readest Remote AZW3 Document",
         "ext": ["azw3"],
         "contentTypes": ["com.amazon.azw", "com.amazon.azw3"],
         "description": "AZW3 file",
@@ -112,25 +112,25 @@
         "rank": "Alternate"
       },
       {
-        "name": "FB2 Document",
+        "name": "Readest Remote FB2 Document",
         "ext": ["fb2"],
-        "contentTypes": ["com.readest.fb2"],
+        "contentTypes": ["io.github.wenhe233.readestremote.fb2"],
         "description": "FB2 file",
         "mimeType": "application/x-fictionbook+xml",
         "role": "Viewer",
         "rank": "Alternate"
       },
       {
-        "name": "CBZ Archive",
+        "name": "Readest Remote CBZ Archive",
         "ext": ["cbz"],
-        "contentTypes": ["com.readest.cbz"],
+        "contentTypes": ["io.github.wenhe233.readestremote.cbz"],
         "description": "CBZ file",
         "mimeType": "application/vnd.comicbook+zip",
         "role": "Viewer",
         "rank": "Alternate"
       },
       {
-        "name": "PDF Document",
+        "name": "Readest Remote PDF Document",
         "ext": ["pdf"],
         "contentTypes": ["com.adobe.pdf"],
         "description": "PDF file",
@@ -139,7 +139,7 @@
         "rank": "Alternate"
       },
       {
-        "name": "Text File",
+        "name": "Readest Remote Text File",
         "ext": ["txt"],
         "contentTypes": ["public.plain-text"],
         "description": "TXT file",
@@ -148,7 +148,7 @@
         "rank": "Alternate"
       },
       {
-        "name": "Markdown Document",
+        "name": "Readest Remote Markdown Document",
         "ext": ["md"],
         "contentTypes": ["net.daringfireball.markdown"],
         "description": "Markdown file",
@@ -197,18 +197,10 @@
         {
           "scheme": ["readest-remote-onedrive"],
           "appLink": false
-        },
-        {
-          "scheme": ["com.googleusercontent.apps.209390247301-ctpmep68ppfa56r1b8tr35e4qi4p60kq"],
-          "appLink": false
         }
       ],
       "desktop": {
-        "schemes": [
-          "readest-remote",
-          "readest-remote-onedrive",
-          "com.googleusercontent.apps.209390247301-ctpmep68ppfa56r1b8tr35e4qi4p60kq"
-        ]
+        "schemes": ["readest-remote", "readest-remote-onedrive"]
       }
     },
     "webview-upgrade": {

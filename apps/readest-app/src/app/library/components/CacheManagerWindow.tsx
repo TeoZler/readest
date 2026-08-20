@@ -19,6 +19,8 @@ import {
 } from '@/utils/cache';
 import { AppService } from '@/types/system';
 import Dialog from '@/components/Dialog';
+import { clearKavitaCoverUrls } from '@/services/kavita/cover';
+import { clearKavitaCoverCache, getKavitaCoverCacheStats } from '@/services/kavita/coverCache';
 
 export const setCacheManagerDialogVisible = (visible: boolean) => {
   const dialog = document.getElementById('cache_manager_window');
@@ -71,8 +73,9 @@ export const CacheManagerWindow = () => {
     try {
       const entries = await getCacheEntries(appService, await getCacheSources(appService));
       const stats = getCacheStats(entries);
-      setCount(stats.count);
-      setSize(stats.size);
+      const kavitaCovers = await getKavitaCoverCacheStats(appService);
+      setCount(stats.count + kavitaCovers.count);
+      setSize(stats.size + kavitaCovers.bytes);
       setStatus('idle');
     } catch (error) {
       console.error('Error scanning cache:', error);
@@ -115,6 +118,8 @@ export const CacheManagerWindow = () => {
     try {
       const entries = await getCacheEntries(appService, await getCacheSources(appService));
       await clearCacheEntries(appService, entries, setProgress);
+      clearKavitaCoverUrls();
+      await clearKavitaCoverCache(appService);
       await scanCache();
       setStatus('done');
     } catch (error) {

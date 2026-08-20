@@ -24,6 +24,8 @@ import {
   type KavitaRuntimeConnection,
 } from './runtime';
 import { createKavitaTransport, type KavitaTransport } from './transport';
+import { fetchNativeKavitaCover } from './nativeCoverTransport';
+import { AbortableTaskPool } from './abortableTaskPool';
 
 const LEGACY_COVER_MARKER = 'kavita-cover-version.txt';
 const MAX_MEMORY_COVERS = 64;
@@ -32,6 +34,7 @@ const MAX_COVER_BYTES = 16 * 1024 * 1024;
 const REVALIDATE_AFTER_MS = 24 * 60 * 60 * 1000;
 const RETRY_DELAYS_MS = [0, 500, 1500] as const;
 const COOLDOWN_DELAYS_MS = [30_000, 120_000, 600_000] as const;
+const PERSIST_COVER_DELAY_MS = 10_000;
 const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
 const DIRECT_FALLBACK_STATUSES = new Set([400, 404, 405, 410, 415]);
 const RETRY_FALLBACK_STATUSES = new Set([408, 500, 502, 503, 504]);
@@ -66,10 +69,10 @@ export interface KavitaCoverFetchDependencies {
 }
 
 const coverEntries = new Map<string, RuntimeCoverEntry>();
-const coverWaiters: Array<() => void> = [];
 const connectionFailures = new Map<string, ConnectionFailureState>();
 const notifiedConnections = new Set<string>();
-let activeFetches = 0;
+const coverFetchPool = new AbortableTaskPool(MAX_CONCURRENT_FETCHES);
+const pendingPersistence = new Map<ReturnType<typeof setTimeout>, string>();
 
 const sleepWithSignal = (milliseconds: number, signal: AbortSignal): Promise<void> =>
   new Promise((resolve, reject) => {
@@ -92,17 +95,7 @@ const runtimeKey = (book: Book): string => {
 };
 
 async function withFetchSlot<T>(signal: AbortSignal, task: () => Promise<T>): Promise<T> {
-  if (activeFetches >= MAX_CONCURRENT_FETCHES) {
-    await new Promise<void>((resolve) => coverWaiters.push(resolve));
-  }
-  signal.throwIfAborted();
-  activeFetches += 1;
-  try {
-    return await task();
-  } finally {
-    activeFetches -= 1;
-    coverWaiters.shift()?.();
-  }
+  return await coverFetchPool.run(signal, task);
 }
 
 async function unlockRuntime(book: Book): Promise<KavitaRuntimeConnection> {
@@ -166,9 +159,9 @@ const retryAfterMilliseconds = (response: Response): number | undefined => {
   const value = response.headers.get('Retry-After');
   if (!value) return undefined;
   const seconds = Number(value);
-  if (Number.isFinite(seconds)) return Math.min(30_000, Math.max(0, seconds * 1000));
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
   const date = Date.parse(value);
-  return Number.isFinite(date) ? Math.min(30_000, Math.max(0, date - Date.now())) : undefined;
+  return Number.isFinite(date) ? Math.max(0, date - Date.now()) : undefined;
 };
 
 const recordFailure = (connectionId: string, now = Date.now()): void => {
@@ -180,6 +173,18 @@ const recordFailure = (connectionId: string, now = Date.now()): void => {
   current.failures = Math.min(current.failures + 1, COOLDOWN_DELAYS_MS.length);
   current.cooldownUntil = now + COOLDOWN_DELAYS_MS[current.failures - 1]!;
   connectionFailures.set(connectionId, current);
+};
+
+const recordRateLimit = (
+  connectionId: string,
+  retryAfter: number | undefined,
+  now: number,
+): void => {
+  recordFailure(connectionId, now);
+  const current = connectionFailures.get(connectionId)!;
+  if (retryAfter !== undefined) {
+    current.cooldownUntil = Math.max(current.cooldownUntil, now + retryAfter);
+  }
 };
 
 const recordAuthenticationFailure = (connectionId: string): void => {
@@ -273,14 +278,25 @@ async function requestApiCover(
     if (validators.etag) headers.set('If-None-Match', validators.etag);
     if (validators.lastModified) headers.set('If-Modified-Since', validators.lastModified);
     try {
-      const response = await authenticatedFetch(client.getChapterCoverUrl(source.chapterId), {
-        method: 'GET',
-        headers,
-        signal,
-        cache: 'no-store',
-        credentials: 'omit',
-        referrerPolicy: 'no-referrer',
-      });
+      const response =
+        !dependencies.transport && isTauriAppPlatform()
+          ? await fetchNativeKavitaCover({
+              baseUrl: getKavitaRuntimeBaseUrl(runtime),
+              chapterId: source.chapterId,
+              authKey: runtime.authKey,
+              allowInvalidTls: runtime.device.allowInvalidTls,
+              etag: validators.etag,
+              lastModified: validators.lastModified,
+              signal,
+            })
+          : await authenticatedFetch(client.getChapterCoverUrl(source.chapterId), {
+              method: 'GET',
+              headers,
+              signal,
+              cache: 'no-store',
+              credentials: 'omit',
+              referrerPolicy: 'no-referrer',
+            });
       if (response.status === 304) {
         resetKavitaCoverFailureState(source.connectionId);
         return { notModified: true };
@@ -293,9 +309,13 @@ async function requestApiCover(
       }
       if (!response.ok) {
         const error = classifyKavitaHttpError(response.status, 'Kavita cover');
-        if (response.status === 429 && attempt + 1 < RETRY_DELAYS_MS.length) {
+        if (response.status === 429) {
           const retryAfter = retryAfterMilliseconds(response);
-          if (retryAfter) await sleep(retryAfter, signal);
+          if (attempt + 1 >= RETRY_DELAYS_MS.length) {
+            recordRateLimit(source.connectionId, retryAfter, now());
+            throw error;
+          }
+          if (retryAfter !== undefined) await sleep(retryAfter, signal);
           lastError = error;
           continue;
         }
@@ -461,6 +481,30 @@ const protectedCacheKeys = (): Set<string> =>
       .map((entry) => entry.key),
   );
 
+const persistCoverInBackground = (
+  appService: AppService,
+  book: Book,
+  blob: Blob,
+  validators: { etag?: string; lastModified?: string },
+): void => {
+  const source = book.kavitaSource;
+  if (!source) return;
+  // Keep filesystem IPC away from the critical render path. A cold shelf can
+  // finish decoding its visible covers before durable cache writes begin.
+  const timer = setTimeout(() => {
+    pendingPersistence.delete(timer);
+    const protectedKeys = protectedCacheKeys();
+    void writeKavitaCoverCache(appService, source, blob, validators, protectedKeys)
+      .then(async (entry) => {
+        // Keep the legacy cover until the new cache payload and index are both
+        // durable. A disabled/full cache still leaves the session Blob usable.
+        if (entry) await deleteLegacyCover(appService, book).catch(() => undefined);
+      })
+      .catch(() => undefined);
+  }, PERSIST_COVER_DELAY_MS);
+  pendingPersistence.set(timer, source.connectionId);
+};
+
 async function refreshPersistentCover(
   appService: AppService,
   book: Book,
@@ -477,14 +521,13 @@ async function refreshPersistentCover(
       return null;
     }
     if (!result.blob) throw new KavitaError('invalid-response', 'Kavita returned no cover body');
-    await writeKavitaCoverCache(
-      appService,
-      book.kavitaSource!,
-      result.blob,
-      { etag: result.etag, lastModified: result.lastModified },
-      protectedCacheKeys(),
-    ).catch(() => null);
-    await deleteLegacyCover(appService, book).catch(() => undefined);
+    // The decoded Blob is ready for display. Native filesystem persistence is
+    // deliberately write-behind so the six network slots are not held by the
+    // globally serialized cache index/file writes on Android.
+    persistCoverInBackground(appService, book, result.blob, {
+      etag: result.etag,
+      lastModified: result.lastModified,
+    });
     return result.blob;
   } catch (error) {
     const localAvailable =
@@ -492,14 +535,7 @@ async function refreshPersistentCover(
       (await appService.exists(getLocalBookFilename(book), 'Books'));
     if (!localAvailable && !shouldFallbackToEpub(error)) throw error;
     const fallback = await extractKavitaCoverBlob(book, signal, appService);
-    await writeKavitaCoverCache(
-      appService,
-      book.kavitaSource!,
-      fallback,
-      {},
-      protectedCacheKeys(),
-    ).catch(() => null);
-    await deleteLegacyCover(appService, book).catch(() => undefined);
+    persistCoverInBackground(appService, book, fallback, {});
     return fallback;
   }
 }
@@ -598,6 +634,11 @@ export function acquireKavitaCoverUrl(book: Book): KavitaCoverLease | null {
 }
 
 export function clearKavitaCoverUrls(connectionId?: string): void {
+  for (const [timer, pendingConnectionId] of pendingPersistence) {
+    if (connectionId && pendingConnectionId !== connectionId) continue;
+    clearTimeout(timer);
+    pendingPersistence.delete(timer);
+  }
   for (const [key, entry] of coverEntries) {
     if (connectionId && entry.connectionId !== connectionId) continue;
     entry.controller.abort();

@@ -18,35 +18,20 @@ import { WebDriveAuth } from './WebDriveAuth';
 import { createDriveTokenPersistence } from './driveTokenStore';
 
 /**
- * The official Readest Google OAuth client id (iOS application type, no secret),
- * baked into the build so Drive sync works for every user out of the box. The
- * only runtime client — there is no BYO, because the redirect scheme is derived
- * from this id and registered in the platform manifests at build time (the
- * `com.googleusercontent.apps.<id>` schemes in `tauri.conf.json`). A forker
- * overrides it via `NEXT_PUBLIC_GOOGLE_CLIENT_ID` at build (and must regenerate
- * the manifest schemes to match). The client id is NOT a secret — it ships
- * inside the app binary.
+ * Readest Remote deliberately has no baked Google OAuth identity. A future
+ * Remote-owned distribution may supply a client id, but must also register its
+ * matching reverse-DNS redirect in its platform manifests. Keeping this unset
+ * disables the provider instead of taking ownership of Readest's callback.
  */
-const OFFICIAL_GOOGLE_CLIENT_ID =
-  '209390247301-ctpmep68ppfa56r1b8tr35e4qi4p60kq.apps.googleusercontent.com';
-
 export const getGoogleClientId = (): string | undefined =>
-  process.env['NEXT_PUBLIC_GOOGLE_CLIENT_ID'] || OFFICIAL_GOOGLE_CLIENT_ID;
+  process.env['NEXT_PUBLIC_REMOTE_GOOGLE_CLIENT_ID'] || undefined;
 
 /**
- * The official Readest **Web-type** Google OAuth client id used by the browser
- * GIS flow (its authorized JavaScript origins are `web.readest.com` + the
- * localhost dev origin). Separate from the iOS-type
- * {@link OFFICIAL_GOOGLE_CLIENT_ID}, which can't drive a browser token client.
- * Not a secret — it ships in the web bundle. A forker overrides it via
- * `NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID` and must register their own deploy origin
- * on that client.
+ * Web OAuth is likewise available only when a Remote-owned client is supplied
+ * with this deployment's origin registered at Google.
  */
-const OFFICIAL_GOOGLE_WEB_CLIENT_ID =
-  '209390247301-585tc3dohg4c02588uvah5d32hg6dneq.apps.googleusercontent.com';
-
 export const getGoogleWebClientId = (): string | undefined =>
-  process.env['NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID'] || OFFICIAL_GOOGLE_WEB_CLIENT_ID;
+  process.env['NEXT_PUBLIC_REMOTE_GOOGLE_WEB_CLIENT_ID'] || undefined;
 
 /** Native `fetch` bypasses the WebView CSP for the googleapis.com hosts. */
 const resolveFetch = (): FetchFn =>

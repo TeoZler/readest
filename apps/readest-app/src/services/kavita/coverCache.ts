@@ -265,8 +265,18 @@ export async function clearKavitaCoverCache(appService: AppService): Promise<voi
 }
 
 export async function getKavitaCoverCacheBytes(appService: AppService): Promise<number> {
+  return (await getKavitaCoverCacheStats(appService)).bytes;
+}
+
+export async function getKavitaCoverCacheStats(
+  appService: AppService,
+): Promise<{ count: number; bytes: number }> {
   return withCacheLock(async () => {
     const index = await readIndex(appService);
-    return Object.values(index.entries).reduce((sum, entry) => sum + entry.byteSize, 0);
+    const entries = Object.values(index.entries);
+    return {
+      count: entries.length,
+      bytes: entries.reduce((sum, entry) => sum + entry.byteSize, 0),
+    };
   });
 }

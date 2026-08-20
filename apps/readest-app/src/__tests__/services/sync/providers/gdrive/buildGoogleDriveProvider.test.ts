@@ -28,36 +28,35 @@ afterEach(() => {
 });
 
 describe('buildGoogleDriveProvider', () => {
-  test('falls back to the baked official client id when the env override is unset', async () => {
-    vi.stubEnv('NEXT_PUBLIC_GOOGLE_CLIENT_ID', '');
-    expect(getGoogleClientId()).toMatch(/\.apps\.googleusercontent\.com$/);
-    // With a baked default + keychain, Drive builds even without an env override.
+  test('stays disabled when no Remote-owned client id is configured', async () => {
+    vi.stubEnv('NEXT_PUBLIC_REMOTE_GOOGLE_CLIENT_ID', '');
+    expect(getGoogleClientId()).toBeUndefined();
     vi.mocked(isTauriAppPlatform).mockReturnValue(true);
     vi.mocked(isSyncKeychainAvailable).mockResolvedValue({ available: true });
-    expect(await buildGoogleDriveProvider()).not.toBeNull();
+    expect(await buildGoogleDriveProvider()).toBeNull();
   });
 
-  test('the env override wins over the baked default', () => {
-    vi.stubEnv('NEXT_PUBLIC_GOOGLE_CLIENT_ID', 'forked.apps.googleusercontent.com');
+  test('uses an explicitly configured Remote-owned native client id', () => {
+    vi.stubEnv('NEXT_PUBLIC_REMOTE_GOOGLE_CLIENT_ID', 'forked.apps.googleusercontent.com');
     expect(getGoogleClientId()).toBe('forked.apps.googleusercontent.com');
   });
 
   test('returns null off-Tauri (no secure token storage for the refresh token)', async () => {
-    vi.stubEnv('NEXT_PUBLIC_GOOGLE_CLIENT_ID', CLIENT_ID);
+    vi.stubEnv('NEXT_PUBLIC_REMOTE_GOOGLE_CLIENT_ID', CLIENT_ID);
     vi.mocked(isTauriAppPlatform).mockReturnValue(false);
     expect(await buildGoogleDriveProvider()).toBeNull();
     expect(isSyncKeychainAvailable).not.toHaveBeenCalled();
   });
 
   test('returns null when the keychain is unavailable', async () => {
-    vi.stubEnv('NEXT_PUBLIC_GOOGLE_CLIENT_ID', CLIENT_ID);
+    vi.stubEnv('NEXT_PUBLIC_REMOTE_GOOGLE_CLIENT_ID', CLIENT_ID);
     vi.mocked(isTauriAppPlatform).mockReturnValue(true);
     vi.mocked(isSyncKeychainAvailable).mockResolvedValue({ available: false });
     expect(await buildGoogleDriveProvider()).toBeNull();
   });
 
   test('builds a provider when client id + keychain are available', async () => {
-    vi.stubEnv('NEXT_PUBLIC_GOOGLE_CLIENT_ID', CLIENT_ID);
+    vi.stubEnv('NEXT_PUBLIC_REMOTE_GOOGLE_CLIENT_ID', CLIENT_ID);
     vi.mocked(isTauriAppPlatform).mockReturnValue(true);
     vi.mocked(isSyncKeychainAvailable).mockResolvedValue({ available: true });
     const provider = await buildGoogleDriveProvider();
@@ -65,19 +64,18 @@ describe('buildGoogleDriveProvider', () => {
     expect(provider?.rootPath).toBe('/');
   });
 
-  test('web: falls back to the baked official web client id when the env override is unset', async () => {
-    vi.stubEnv('NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID', '');
+  test('web: stays disabled without a Remote-owned web client id', async () => {
+    vi.stubEnv('NEXT_PUBLIC_REMOTE_GOOGLE_WEB_CLIENT_ID', '');
     vi.mocked(isWebAppPlatform).mockReturnValue(true);
-    expect(getGoogleWebClientId()).toMatch(/\.apps\.googleusercontent\.com$/);
+    expect(getGoogleWebClientId()).toBeUndefined();
     const provider = await buildGoogleDriveProvider();
-    expect(provider).not.toBeNull();
-    expect(provider?.rootPath).toBe('/');
+    expect(provider).toBeNull();
     // The web path never touches the keychain.
     expect(isSyncKeychainAvailable).not.toHaveBeenCalled();
   });
 
-  test('web: the env override wins over the baked web default', async () => {
-    vi.stubEnv('NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID', 'forked-web.apps.googleusercontent.com');
+  test('web: uses an explicitly configured Remote-owned web client id', async () => {
+    vi.stubEnv('NEXT_PUBLIC_REMOTE_GOOGLE_WEB_CLIENT_ID', 'forked-web.apps.googleusercontent.com');
     vi.mocked(isWebAppPlatform).mockReturnValue(true);
     expect(getGoogleWebClientId()).toBe('forked-web.apps.googleusercontent.com');
     const provider = await buildGoogleDriveProvider();

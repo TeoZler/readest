@@ -102,6 +102,33 @@ describe('Kavita cover API retry policy', () => {
     expect(calls).toBe(1);
   });
 
+  it('honors Retry-After and latches a cross-request cooldown after repeated 429s', async () => {
+    register();
+    let calls = 0;
+    const sleeps: number[] = [];
+    const request = () =>
+      fetchKavitaCoverApiBlob(
+        book,
+        new AbortController().signal,
+        {},
+        {
+          transport: async () => {
+            calls += 1;
+            return new Response('', { status: 429, headers: { 'Retry-After': '45' } });
+          },
+          sleep: async (milliseconds) => {
+            sleeps.push(milliseconds);
+          },
+          random: () => 0.5,
+          now: () => 100,
+        },
+      );
+    await expect(request()).rejects.toMatchObject({ status: 429 });
+    await expect(request()).rejects.toMatchObject({ category: 'network' });
+    expect(calls).toBe(3);
+    expect(sleeps).toEqual([45_000, 500, 45_000, 1500]);
+  });
+
   it('honors 304 validators without reading a body', async () => {
     register();
     const result = await fetchKavitaCoverApiBlob(

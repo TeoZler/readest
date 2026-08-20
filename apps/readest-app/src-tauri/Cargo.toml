@@ -33,13 +33,14 @@ minisign-verify = "0.2"
 log = "0.4"
 thiserror = "2"
 walkdir = "2"
-tokio = { version = "1", features = ["fs"] }
+tokio = { version = "1", features = ["fs", "macros", "sync"] }
 tokio-util = { version = "0.7", features = ["codec"] }
 futures-util = "0.3"
 futures = "0.3.31"
 read-progress-stream = "1.0.0"
 reqwest = { version = "0.12", default-features = false, features = [
   "json",
+  "rustls-tls",
   "stream",
 ] }
 tauri = { version = "2", features = [ "protocol-asset" ] }

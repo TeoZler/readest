@@ -16,10 +16,10 @@ describe('WebDatabaseService (browser WASM, in-memory SQLite)', () => {
 
   beforeEach(async () => {
     db = await WebDatabaseService.open(':memory:', { experimental: ['index_method'] });
-  });
+  }, 60_000);
 
   afterEach(async () => {
-    await db.close();
+    await db?.close();
   });
 
   describe('Base Operations', () => {

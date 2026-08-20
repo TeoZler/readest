@@ -12,6 +12,7 @@ const tauri = JSON.parse(read('src-tauri/tauri.conf.json')) as {
   bundle: {
     windows?: { nsis?: { installerHooks?: string } };
     iOS?: { developmentTeam?: string };
+    fileAssociations: Array<{ name: string; contentTypes?: string[] }>;
   };
   plugins: { 'deep-link': { mobile: Array<{ scheme: string[] }>; desktop: { schemes: string[] } } };
 };
@@ -33,11 +34,13 @@ describe('Readest Remote release identity', () => {
     expect(schemes).toContain('readest-remote-onedrive');
     expect(schemes).not.toContain('readest');
     expect(schemes).not.toContain('readest-onedrive');
+    expect(schemes.join(' ')).not.toContain('googleusercontent');
 
     const manifest = read('src-tauri/gen/android/app/src/main/AndroidManifest.xml');
     expect(manifest).toContain('android:scheme="readest-remote"');
     expect(manifest).not.toMatch(/android:scheme="readest"/);
     expect(manifest).not.toContain('android:host="web.readest.com"');
+    expect(manifest).not.toContain('googleusercontent');
   });
 
   it('uses the independent Android identity and deterministic revision code', () => {
@@ -57,6 +60,7 @@ describe('Readest Remote release identity', () => {
     );
     expect(info).toContain('iCloud.io.github.wenhe233.readestremote');
     expect(info).toContain('<string>readest-remote</string>');
+    expect(info).not.toContain('googleusercontent');
     expect(project).toContain('io.github.wenhe233.readestremote.ShareExtension');
     expect(project).toContain('io.github.wenhe233.readestremote.ReadestWidget');
     expect(project).not.toContain('DEVELOPMENT_TEAM:');
@@ -66,13 +70,30 @@ describe('Readest Remote release identity', () => {
   });
 
   it('does not register the Explorer thumbnail hook or expose a storefront', () => {
+    const windowsConfig = read('src-tauri/tauri.windows.conf.json');
     expect(tauri.bundle.windows?.nsis?.installerHooks).toBeUndefined();
+    expect(windowsConfig).not.toContain('thumbnail');
+    expect(windowsConfig).toContain('"version": "0.12.1-1"');
     expect(read('src/hooks/useAvailablePlans.ts')).toContain(
       'export const PURCHASES_ENABLED = false',
     );
     expect(read('src-tauri/gen/android/app/src/main/AndroidManifest.xml')).not.toContain(
       'com.android.vending.BILLING',
     );
+  });
+
+  it('uses Remote-owned Windows ProgIDs and custom Apple content types', () => {
+    expect(tauri.bundle.fileAssociations).toHaveLength(9);
+    expect(
+      tauri.bundle.fileAssociations.every(({ name }) => name.startsWith('Readest Remote ')),
+    ).toBe(true);
+    const contentTypes = tauri.bundle.fileAssociations.flatMap(
+      ({ contentTypes = [] }) => contentTypes,
+    );
+    expect(contentTypes).not.toContain('com.readest.fb2');
+    expect(contentTypes).not.toContain('com.readest.cbz');
+    expect(contentTypes).toContain('io.github.wenhe233.readestremote.fb2');
+    expect(contentTypes).toContain('io.github.wenhe233.readestremote.cbz');
   });
 
   it('does not embed official updater or telemetry targets', () => {

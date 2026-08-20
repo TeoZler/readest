@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   clearKavitaCoverCache,
   getKavitaCoverCacheBytes,
+  getKavitaCoverCacheStats,
   readKavitaCoverCache,
   saveKavitaCoverCacheSettings,
   writeKavitaCoverCache,
@@ -94,6 +95,7 @@ describe('Kavita cover persistent cache', () => {
       await new Promise((resolve) => setTimeout(resolve, 2));
     }
     expect(await getKavitaCoverCacheBytes(appService)).toBe(8);
+    expect(await getKavitaCoverCacheStats(appService)).toEqual({ count: 2, bytes: 8 });
     expect(await readKavitaCoverCache(appService, source(1))).toBeNull();
     expect(await readKavitaCoverCache(appService, source(2))).not.toBeNull();
     expect(await readKavitaCoverCache(appService, source(3))).not.toBeNull();

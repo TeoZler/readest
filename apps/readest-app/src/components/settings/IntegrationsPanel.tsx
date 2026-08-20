@@ -29,7 +29,10 @@ import { CatalogManager } from '@/app/opds/components/CatalogManager';
 import { saveSysSettings } from '@/helpers/settings';
 import { isCloudSyncAllowed } from '@/utils/access';
 import { isWebAppPlatform } from '@/services/environment';
-import { getGoogleWebClientId } from '@/services/sync/providers/gdrive/buildGoogleDriveProvider';
+import {
+  getGoogleClientId,
+  getGoogleWebClientId,
+} from '@/services/sync/providers/gdrive/buildGoogleDriveProvider';
 import { getMicrosoftClientId } from '@/services/sync/providers/onedrive/buildOneDriveProvider';
 import { isICloudSupportedPlatform } from '@/services/sync/providers/icloud/buildICloudProvider';
 import { getICloudContainerStatus } from '@/utils/bridge';
@@ -624,11 +627,8 @@ const IntegrationsPanel: React.FC = () => {
             {/* Third-party providers are premium: every row carries the tier
                 badge; on a free plan the checkbox is disabled and opening a
                 row routes to the upgrade page instead of the config sub-page. */}
-            {(appService?.isDesktopApp ||
-              appService?.isAndroidApp ||
-              appService?.isIOSApp ||
-              // Web: only when a Web-type GIS client id is configured for this build.
-              (isWebAppPlatform() && !!getGoogleWebClientId())) && (
+            {((isWebAppPlatform() && !!getGoogleWebClientId()) ||
+              (!isWebAppPlatform() && !!getGoogleClientId())) && (
               <CloudProviderRow
                 icon={RiGoogleLine}
                 title={_('Google Drive')}
