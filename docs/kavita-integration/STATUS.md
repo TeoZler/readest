@@ -454,11 +454,21 @@ Release-pipeline evidence on 2026-08-19:
   universal, Android universal/ARM64, unsigned iOS ARM64, Web, KOReader,
   Calibre and browser-extension filenames, then generates and re-verifies
   `SHA256SUMS.txt` from the assembled directory.
+- The fourth matrix (`32373607448`) independently completed the repaired
+  Android path: both signed APK variants passed Gradle tests, package/version/
+  label checks, the no-Billing check, and the pinned-certificate check. Every
+  other platform in that run also passed except the already-fixed iOS scaffold
+  issue described above.
+- The final no-Release matrix (`32376286443`) at commit `4223297b1` completed
+  successfully on 2026-08-20. Web lint/unit/browser/companion tests,
+  Rust/Tauri/WebDriver, Web and companion packaging, Windows x64/ARM64,
+  Linux x64/ARM64, unsigned universal macOS, unsigned iOS ARM64, and signed
+  Android universal/ARM64 all passed. The aggregation job accepted the exact
+  16-file manifest, generated `SHA256SUMS.txt`, and re-verified every checksum.
+  The dispatch run did not execute the tag-only publication job and therefore
+  created no Release side effect.
 
 Remaining hard gates before the release tag:
 
-- Complete a no-Release matrix with every platform build and aggregation job
-  green after the clean-runner fixes. KOReader/LuaJIT, Calibre, Web, browser,
-  Rust/Tauri and Web-components gates have already passed on hosted runners.
 - Validate account/cloud login with an account under the new callback identity;
   Google Drive stays disabled until a Remote-owned OAuth client is supplied.
