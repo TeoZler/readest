@@ -11,7 +11,8 @@ const tauri = JSON.parse(read('src-tauri/tauri.conf.json')) as {
   identifier: string;
   bundle: {
     windows?: { nsis?: { installerHooks?: string } };
-    iOS?: { developmentTeam?: string };
+    macOS?: { bundleVersion?: string };
+    iOS?: { developmentTeam?: string; bundleVersion?: string };
     fileAssociations: Array<{ name: string; contentTypes?: string[] }>;
   };
   plugins: { 'deep-link': { mobile: Array<{ scheme: string[] }>; desktop: { schemes: string[] } } };
@@ -67,11 +68,13 @@ describe('Readest Remote release identity', () => {
     expect(project).toContain('io.github.wenhe233.readestremote.ReadestWidget');
     expect(project).not.toContain('DEVELOPMENT_TEAM:');
     expect(widgetInfo).toContain('<string>Readest Remote</string>');
-    expect(widgetInfo).toContain('<string>0.12.1-r1</string>');
+    expect(widgetInfo).toContain('<string>0.12.1</string>');
     expect(widgetInfo).toContain('<string>12001001</string>');
     expect(safariAuth).toContain('NSString::from_str("readest-remote")');
     expect(safariAuth).not.toContain('NSString::from_str("readest")');
     expect(tauri.bundle.iOS?.developmentTeam).toBeUndefined();
+    expect(tauri.bundle.iOS?.bundleVersion).toBe('12001001');
+    expect(tauri.bundle.macOS?.bundleVersion).toBe('12001001');
     expect(bridge).toContain('io.github.wenhe233.readestremote.sync-passphrase');
     expect(bridge).toContain('io.github.wenhe233.readestremote.secure-items');
   });

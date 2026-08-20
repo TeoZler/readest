@@ -425,6 +425,10 @@ Release-pipeline evidence on 2026-08-19:
   now recreates the complete Apple scaffold with `ios init --ci`, restores the
   tracked Remote project/extension customizations, and only then invokes the
   Tauri unsigned build.
+- Apple bundle metadata maps public `0.12.1-r1` to the platform-valid short
+  version `0.12.1` and numeric build `12001001`; filenames and the Git tag keep
+  the full public version. iOS IPA inspection now asserts both mapped values,
+  and the main app plus Widget share the same build number.
 - The same third matrix built and reported the signed universal Android APK but
   the Tauri wrapper returned non-zero immediately afterward. The clean-runner
   job now accepts that recovery only when a fresh non-empty APK exists; the

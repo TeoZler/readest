@@ -68,6 +68,7 @@ describe('Readest Remote release workflow', () => {
     expect(workflow).toContain('accepting only a fresh, verifiable APK');
     expect(workflow).toContain('pnpm tauri ios build --ci --no-sign');
     expect(workflow).toContain('pnpm tauri ios init --ci --skip-targets-install');
+    expect(workflow).toContain('Print :CFBundleVersion');
     expect(workflow).not.toContain('xcodebuild archive');
     expect(workflow).toContain("NEXT_PUBLIC_PORTABLE_APP: 'true'");
     expect(workflow).toContain('test -s apps/readest-app/out/sw.js');

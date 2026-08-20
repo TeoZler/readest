@@ -527,8 +527,11 @@ jobs:
           app=$(find "$stage/Payload" -maxdepth 1 -type d -name '*.app' -print -quit)
           test -n "$app"
           info="$app/Info.plist"
+          apple_version='${{ needs.metadata.outputs.version }}'
+          apple_version="${apple_version%%-*}"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$info")" = 'io.github.wenhe233.readestremote'
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$info")" = '${{ needs.metadata.outputs.version }}'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$info")" = "$apple_version"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$info")" = '12001001'
           mkdir -p "$GITHUB_WORKSPACE/release"
           cp "$ipa" "$GITHUB_WORKSPACE/release/Readest-Remote_${{ needs.metadata.outputs.version }}_ios-arm64.ipa"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
