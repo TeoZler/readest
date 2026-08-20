@@ -22,8 +22,8 @@ test infrastructure must never be added to this repository.
 | Phase 2 — connection and shelf sync | Complete | Connection UI, explicit Library selection, staged pagination, source filters, and deletion safety |
 | Phase 3 — reading, cache, offline | Complete | Strict lazy foliate-js open, persistent LRU cache, verified queued offline transfer |
 | Phase 4 — progress and credentials | Complete | Kavita-owned progress, encrypted credentials, conflict handling and offline queue |
-| Phase 5 — platform acceptance | Complete | Full Web/Windows/Android checks and real Android Kavita runtime acceptance passed; Web remains explicitly conditional |
-| Corrective API cover path | Implementation complete; runtime reacceptance pending | API-first Blob loading, global cover cache, retry/cooldown and classified EPUB fallback implemented; targeted unit and Chromium tests pass |
+| Phase 5 — platform acceptance | Reopened | The original reader/offline gates passed, but the later API-cover requirement exposed a missed visual defect and a still-failing Android cover-performance gate |
+| Corrective API cover path | Functional pass; performance gate failed | API-first native Blob loading, device cache, retry/cooldown and classified EPUB fallback work on Android; cold first-cover and first-screen timings remain above the locked limits |
 
 ## Phase 0 verification
 
@@ -47,7 +47,23 @@ Results on 2026-08-19:
 
 ## Current blockers
 
-- No Readest V1 implementation or native-platform blocker remains.
+- Android API-first cover performance is not accepted. On the API 36 x86_64
+  emulator the final isolated cold run decoded the first cover in `7711 ms`
+  and only 11 covers within the 15-second observation window, versus the
+  locked first-cover `1500 ms` / first-12 `5000 ms` limits.
+  Functional evidence is clean (one image API GET per book, no EPUB Range or
+  full-file response), but a functional pass does not waive the performance
+  gate.
+- The no-Release GitHub Actions matrix has not run. Apple, Linux, Windows
+  ARM64, Android release signing, unsigned iOS packaging and KOReader/LuaJIT
+  therefore remain CI-only hard gates.
+- A stable Readest Remote Android release keystore and GitHub Secrets have not
+  been created. This intentionally waits until the product owner can save the
+  one-time recovery password and confirm it before any release attempt.
+- Readest account/cloud login under the new callback identity has not been
+  validated with an account. Google Drive is disabled unless a Remote-owned
+  OAuth client is explicitly supplied; the fork no longer embeds or registers
+  Readest's Google OAuth identity.
 - Positive Web connectivity to an unmodified Kavita `v0.9.0.2` production
   server is unavailable: real catalog and Range preflights returned `204`
   without `Access-Control-Allow-Origin` or allowed/exposed header fields. This
@@ -239,7 +255,8 @@ by D-003. The new implementation:
 - retains the old authenticated EPUB extraction only for the locked fallback
   matrix and complete local offline EPUBs.
 
-Targeted implementation checks on 2026-08-19:
+Targeted implementation checks on 2026-08-19 and final regression on
+2026-08-20:
 
 - TypeScript type check: passed.
 - Unit tests: cover retry/auth/304, persistent versioning/global LRU/clear, and
@@ -248,10 +265,34 @@ Targeted implementation checks on 2026-08-19:
   returned a Blob that decoded with positive dimensions, and the existing
   strict-Range extraction fallback still decoded the real EPUB cover — `2`
   assertions passed.
+- The native cover transport now owns the credential-bearing URL on Windows
+  and Android, uses shared strict/insecure HTTP clients, returns only redacted
+  error classes across IPC, bounds responses at 16 MiB, decodes/rasterizes the
+  image and returns a small JPEG Blob. Cancellation is wired through a native
+  request registry, and aborted concurrency waiters no longer strand a slot.
+- Full unit regression passed `723` files with `9039` assertions; `4` files and
+  `16` assertions were skipped. Full Chromium regression passed all `37` files
+  with `360` assertions and `1` skipped. TypeScript/Biome lint passed (`2043`
+  files), and all `89` Rust library tests passed.
+- The global Manage Cache dialog now counts and clears `KavitaCoverCache`
+  entries as well as the existing caches, while leaving complete offline EPUBs
+  untouched. Android runtime inspection confirmed the count/size increase and
+  the subsequent clear.
+- Android functional acceptance reached `12/12` decoded visible covers. The
+  native probe observed no credential-bearing URL in WebView/CDP, Kavita logs
+  showed one chapter-cover GET per unique book, and no `/api/Download`, EPUB
+  Range fallback or full EPUB response occurred on the success path.
 
 The former Range-extraction Android measurements are historical evidence, not
-acceptance evidence for D-003. Fresh Android and Windows performance/runtime
-measurements remain mandatory before release.
+acceptance evidence for D-003. For the final isolated API-first run, the shelf
+was first switched to local-only, `KavitaCoverCache` was removed while the app
+was stopped, and the process was cold-started before switching to the Remote
+source under the probe. The first Blob cover decoded in `7711 ms`; only 11
+decoded within 15 seconds, so the first-12 result did not reach the locked
+`5000 ms` gate. Native metrics showed response/network time as the dominant
+cost (up to about `8.0 s` for an individual request), while Base64 decode was
+`0–4 ms` for the measured completions. A fresh Windows API-first cover
+benchmark also remains mandatory before release.
 
 ## Readest Remote release identity
 
@@ -261,24 +302,51 @@ and custom schemes `readest-remote://` and `readest-remote-onedrive://`.
 Internal workspace package names, the `Readest` Cargo crate, database and sync
 protocols, and `/Readest/...` storage layout remain unchanged.
 
-Identity evidence on 2026-08-19:
+Identity evidence on 2026-08-19 and final isolation verification on
+2026-08-20:
 
 - The Android x86_64 APK built and its binary manifest reports package
   `io.github.wenhe233.readestremote`, version name `0.12.1-r1`, version code
   `12001001`, label `Readest Remote`, no Billing permission, no upstream App
   Link, and only the new Remote custom schemes.
+- The final universal release resources were rebuilt with the already-verified
+  arm64/x86_64 release libraries, test-signed solely for local installation,
+  and installed over the emulator test build. Binary inspection again reported
+  `io.github.wenhe233.readestremote`, `12001001`, `0.12.1-r1`, label
+  `Readest Remote`, and no upstream Google/App Link scheme.
 - The API 36 emulator has both `com.bilingify.readest` and
   `io.github.wenhe233.readestremote` installed. Android resolves `readest://`
   only to the official package and `readest-remote://` only to Remote. Their
   data directories are distinct, and Remote cold-started with an empty library
   instead of inheriting the official test library.
-- The Windows x64 release and NSIS bundle built successfully. PE version
-  resources report `Readest Remote` and `0.12.1-r1`, and the native binary is
-  `readest-remote.exe`.
-- The Web production build passed. Full Vitest regression passed `720` files
-  and `9028` assertions, with `4` files and `16` assertions skipped. TypeScript
-  and Biome lint passed (`2038` files); `cargo fmt -p Readest -- --check` and
-  all `85` Readest crate unit tests passed.
+- The Windows x64 release and NSIS bundle build successfully after mapping the
+  Windows-internal prerelease to numeric `0.12.1-1`; package/UI/Release identity
+  remains `0.12.1-r1`. PE resources report `Readest Remote`, and the native
+  binary is `readest-remote.exe`.
+- Official Readest `0.12.1` and Remote were installed side by side under
+  `C:\Program Files\Readest` and `C:\Program Files\Readest Remote`. Their
+  uninstall entries and roaming/local data roots are distinct. A live protocol
+  probe launched the official binary for `readest://` and the Remote binary for
+  `readest-remote://`.
+- Side-by-side inspection caught and removed two remaining collision sources:
+  the Remote bundle no longer builds/bundles the Explorer thumbnail DLL, no
+  longer registers Readest's Google reverse-DNS callback, and uses
+  `Readest Remote ...` ProgIDs plus Remote-owned custom Apple content types for
+  file associations.
+- The final NSIS was installed, silently uninstalled, and installed again next
+  to official Readest. Installation mapped `.epub` to the Remote-owned
+  `Readest Remote EPUB Document` ProgID without changing the official
+  `readest://` handler. Remote uninstall removed only its protocol/ProgID,
+  restored `.epub` to official `EPUB Document`, left official Readest intact,
+  and the final reinstall restored the verified side-by-side state.
+- The Web production build passed. Final full Vitest regression passed `723`
+  files and `9039` assertions, with `4` files and `16` assertions skipped.
+  Final Chromium regression passed `37` files and `360` assertions with `1`
+  skipped. TypeScript and Biome lint passed (`2043` files); scoped rustfmt,
+  all `89` Rust library tests, and Clippy with warnings denied passed. Clippy's
+  sole required allowance is `clippy::incompatible-msrv` in the pinned Tauri
+  source, which declares Rust `1.77.2` while using `repeat_n` stabilized in
+  Rust `1.82.0`; no product-code warning was suppressed.
 - Calibre regression passed `113` tests and maps the Remote revision to
   `PLUGIN_VERSION = (0, 12, 1, 1)`. The browser extension built and produced a
   reproducible, system-zip-independent
@@ -334,15 +402,15 @@ Release-pipeline evidence on 2026-08-19:
 
 Remaining hard gates before the release tag:
 
-- Repeat the API-first cover benchmark on a freshly connected Readest Remote
-  Android install and on Windows. The earlier Range-only results do not count.
-- Install the official Windows stable build beside the Remote NSIS build and
-  verify install directory, uninstall entry, file association, data directory,
-  and protocol isolation.
+- Meet the API-first cover timing limits on Android and run the corresponding
+  fresh Windows benchmark. The current Android functional result is not fast
+  enough to accept.
 - Run the KOReader syntax/tests in CI or another environment with LuaJIT; the
   Windows host has no LuaJIT and the local scripts therefore reported a skip.
 - Run Apple, Linux ARM64/x64, Windows ARM64, Android release-signing and iOS
   unsigned-IPA jobs in the no-Release Actions matrix.
-- The repository-wide rustfmt command still fails on pre-existing CRLF and two
-  untouched plugin formatting differences. The scoped Readest crate check is
-  clean; no bulk upstream formatting rewrite will be made for this fork.
+- Generate the stable Remote Android keystore only after the product owner can
+  save and confirm the one-time recovery password, then configure the release
+  Secrets and prove an upgrade signed by that certificate.
+- Validate account/cloud login with an account under the new callback identity;
+  Google Drive stays disabled until a Remote-owned OAuth client is supplied.
