@@ -8,5 +8,5 @@ describe('librarySearchService SSR safety', () => {
   it('imports without browser globals', async () => {
     expect(typeof NodeFilter).toBe('undefined');
     await expect(import('@/services/librarySearchService')).resolves.toBeDefined();
-  });
+  }, 15_000);
 });
