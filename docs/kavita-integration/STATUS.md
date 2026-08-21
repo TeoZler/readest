@@ -467,6 +467,20 @@ Release-pipeline evidence on 2026-08-19:
   16-file manifest, generated `SHA256SUMS.txt`, and re-verified every checksum.
   The dispatch run did not execute the tag-only publication job and therefore
   created no Release side effect.
+- A final local pre-push pass exposed a cover/connection circular-initialization
+  race that could make asynchronous connection cleanup touch cover state while
+  its module was still in the temporal dead zone. The cover module now loads
+  the connection repository only at the two async use sites, and connection
+  save/removal awaits cover-state cleanup instead of leaving unhandled dynamic
+  imports. Cold module-import tests also use an explicit 15-second per-test
+  budget so a loaded Windows host cannot abandon one import and pollute the
+  next test. Two consecutive full local regressions then passed `723` files
+  and `9039` assertions with `4` files and `16` assertions skipped.
+- The post-fix no-Release matrix (`32434641383`) at commit `e14416c50`
+  completed successfully on 2026-08-21. Every Web, Rust/Tauri/WebDriver,
+  Windows x64/ARM64, Linux x64/ARM64, macOS universal, iOS ARM64, Android
+  universal/ARM64, Web/companion packaging, and final 16-file checksum gate
+  passed without creating a GitHub Release.
 
 Account/cloud acceptance on 2026-08-21:
 
