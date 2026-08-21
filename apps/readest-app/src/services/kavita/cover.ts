@@ -17,7 +17,6 @@ import {
 } from './coverCache';
 import { KavitaError, classifyKavitaHttpError, classifyKavitaNetworkError } from './errors';
 import { openKavitaBookFile } from './content';
-import { getKavitaConnectionRepository } from './connections';
 import {
   getKavitaRuntimeBaseUrl,
   getKavitaRuntimeConnection,
@@ -103,6 +102,7 @@ async function unlockRuntime(book: Book): Promise<KavitaRuntimeConnection> {
   if (!source) throw new KavitaError('not-found', 'Book has no Kavita source');
   let runtime = getKavitaRuntimeConnection(source.connectionId);
   if (!runtime) {
+    const { getKavitaConnectionRepository } = await import('./connections');
     await getKavitaConnectionRepository()?.unlock(source.connectionId);
     runtime = getKavitaRuntimeConnection(source.connectionId);
   }
@@ -234,6 +234,7 @@ const notifyConnectionError = async (
       message: `${runtime.config.name}: Kavita cover authentication or Download permission failed`,
     });
   }
+  const { getKavitaConnectionRepository } = await import('./connections');
   const repository = getKavitaConnectionRepository();
   if (repository) {
     const device = repository.getDeviceConfig(runtime.config.id);

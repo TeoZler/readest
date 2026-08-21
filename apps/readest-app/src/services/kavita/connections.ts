@@ -85,9 +85,8 @@ export class KavitaConnectionRepository {
     this.storage.setItem(DEVICE_CONFIGS_KEY, JSON.stringify([...devices, device]));
     const key = authKey ?? (await this.credentials.get(config.id));
     if (key) registerKavitaRuntimeConnection({ config, device, authKey: key });
-    void import('./cover').then(({ resetKavitaCoverFailureState }) =>
-      resetKavitaCoverFailureState(config.id),
-    );
+    const { resetKavitaCoverFailureState } = await import('./cover');
+    resetKavitaCoverFailureState(config.id);
     if (options.publish !== false) {
       const { KAVITA_CONNECTION_KIND } = await import('@/services/sync/adapters/kavitaConnection');
       const { publishReplicaUpsert } = await import('@/services/sync/replicaPublish');
@@ -147,7 +146,8 @@ export class KavitaConnectionRepository {
     );
     await this.credentials.clear(connectionId);
     unregisterKavitaRuntimeConnection(connectionId);
-    void import('./cover').then(({ clearKavitaCoverUrls }) => clearKavitaCoverUrls(connectionId));
+    const { clearKavitaCoverUrls } = await import('./cover');
+    clearKavitaCoverUrls(connectionId);
     const { KAVITA_CONNECTION_KIND } = await import('@/services/sync/adapters/kavitaConnection');
     const { publishReplicaDelete } = await import('@/services/sync/replicaPublish');
     await publishReplicaDelete(KAVITA_CONNECTION_KIND, connectionId);
@@ -164,7 +164,8 @@ export class KavitaConnectionRepository {
     );
     await this.credentials.clear(connectionId);
     unregisterKavitaRuntimeConnection(connectionId);
-    void import('./cover').then(({ clearKavitaCoverUrls }) => clearKavitaCoverUrls(connectionId));
+    const { clearKavitaCoverUrls } = await import('./cover');
+    clearKavitaCoverUrls(connectionId);
   }
 }
 
