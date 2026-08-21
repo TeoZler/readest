@@ -468,7 +468,14 @@ Release-pipeline evidence on 2026-08-19:
   The dispatch run did not execute the tag-only publication job and therefore
   created no Release side effect.
 
-Remaining hard gates before the release tag:
+Account/cloud acceptance on 2026-08-21:
 
-- Validate account/cloud login with an account under the new callback identity;
-  Google Drive stays disabled until a Remote-owned OAuth client is supplied.
+- The product owner created a dedicated test account, completed login, and
+  performed an actual cloud synchronization in the installed Windows Remote
+  build. A subsequent read-only UI inspection confirmed that the former
+  `登录以同步书库` action was gone and the account menu reported `已登录`.
+- Google Drive remains intentionally disabled until a Remote-owned OAuth
+  client is supplied; this documented boundary does not block the account and
+  built-in cloud-sync acceptance above.
+
+Remaining hard gates before the release tag: none.
