@@ -66,7 +66,7 @@ test infrastructure must never be added to this repository.
   where `Kavita` is hidden while `Online` remains visible; the default was
   restored after the check.
 
-### iOS icons, Chinese localization, and r2 identity — local acceptance complete; CI pending
+### iOS icons, Chinese localization, and r2 identity — accepted
 
 - The unsigned IPA post-processing step now keeps `Assets.car`, generates a
   complete opaque RGB legacy icon set in the application bundle, and rebuilds
@@ -81,10 +81,10 @@ test infrastructure must never be added to this repository.
 - Verification: TypeScript, shell syntax, release-identity/progress tests and
   both Chinese coverage suites passed locally. The rebuilt Windows application
   displayed the Kavita connection form, cache controls and both badge labels
-  in Simplified Chinese. The hosted all-platform package matrix remains a
-  release gate.
+  in Simplified Chinese. The hosted all-platform package and icon matrix passed
+  in no-Release run `32710796213`.
 
-### 0.12.1-r2 release preparation — implemented; final gates pending
+### 0.12.1-r2 release preparation — pre-release gates accepted
 
 - Public release identity is `0.12.1-r2`, Tag `v0.12.1-r2`, Android/Apple
   build `12001002`, and Windows file version `0.12.1-2`. Internal workspace,
@@ -99,8 +99,8 @@ test infrastructure must never be added to this repository.
   browser suite's first run had one loaded-host Worker timeout; that test passed
   alone in 4.87 seconds and the complete clean rerun then passed.
 - The final Windows debug build completed after embedding the r2 resources and
-  the timestamp fix. Remaining hard gates are one no-Release Actions matrix at
-  the final commit and the successful tagged release plus asset/checksum audit.
+  the timestamp fix. The no-Release Actions gate is now accepted; the remaining
+  hard gates are the successful tagged release and asset/checksum audit.
 - The first hosted no-Release matrix (`32703984828`, commit `15b2e8f88`)
   confirmed Web packaging, lint, unit, browser, KOReader, extension, Tauri,
   Android, iOS, macOS and both Windows builds. It exposed two release-gate
@@ -110,15 +110,21 @@ test infrastructure must never be added to this repository.
   app's `0.12.1-r2` revision and all `113` Calibre tests pass locally; Linux
   inspection now materializes the complete package listing before checking its
   desktop and icon entries. Local `actionlint` accepts the corrected workflow.
-  A replacement full matrix remains mandatory before tagging.
+  This required the replacement full matrix recorded below.
 - The replacement matrix (`32707954543`, commit `8cca7f31c`) passed every Web,
   Tauri, Android, iOS, macOS and Windows x64/arm64 job, including the corrected
   Calibre gate. Both Linux architectures again built their AppImage and deb,
   but the remaining regular-expression check still rejected `dpkg-deb -c`'s
   presentation. Linux verification now extracts the deb and checks the actual
   non-empty desktop and PNG/SVG files under `usr/share`; this preserves the
-  icon gate while removing the package-listing format dependency. A further
-  complete no-Release matrix is required to prove this final workflow change.
+  icon gate while removing the package-listing format dependency. The final
+  complete no-Release matrix below proves this workflow change.
+- The final no-Release matrix (`32710796213`, commit `1f1973cc9`) completed with
+  every job successful: metadata, Web/Tauri tests, Web/companion packaging,
+  Android, unsigned iOS, macOS universal, Linux x64/arm64, Windows x64/arm64,
+  and aggregate checksum verification. The publish job was correctly skipped
+  because this was a branch dispatch. The remaining gates are the tagged run,
+  formal Release publication and final asset/checksum audit.
 
 ### Upgrade-time Chinese catalogue refresh — Windows runtime accepted
 
@@ -153,7 +159,7 @@ test infrastructure must never be added to this repository.
 | Phase 2 — connection and shelf sync | Complete | Connection UI, explicit Library selection, staged pagination, source filters, and deletion safety |
 | Phase 3 — reading, cache, offline | Complete | Strict lazy foliate-js open, persistent LRU cache, verified queued offline transfer |
 | Phase 4 — progress and credentials | Complete | Kavita-owned progress, encrypted credentials, conflict handling and offline queue |
-| Phase 5 — platform acceptance | Local pass; CI matrix pending | Reader/offline, API-cover correctness, Android runtime, Windows side-by-side identity and local regression gates passed; cross-platform hosted builds remain pending |
+| Phase 5 — platform acceptance | Complete | Reader/offline, API-cover correctness, Android runtime, Windows side-by-side identity, local regression gates and hosted all-platform no-Release matrix passed |
 | Corrective API cover path | Accepted | API-first native Blob loading, device cache, retry/cooldown and classified EPUB fallback work on Android; measured cold-start latency is retained as a known limitation rather than a release gate |
 
 ## Phase 0 verification
