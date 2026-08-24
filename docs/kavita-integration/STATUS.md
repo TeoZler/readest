@@ -84,7 +84,7 @@ test infrastructure must never be added to this repository.
   in Simplified Chinese. The hosted all-platform package and icon matrix passed
   in no-Release run `32710796213`.
 
-### 0.12.1-r2 release preparation — pre-release gates accepted
+### 0.12.1-r2 release — published and audited
 
 - Public release identity is `0.12.1-r2`, Tag `v0.12.1-r2`, Android/Apple
   build `12001002`, and Windows file version `0.12.1-2`. Internal workspace,
@@ -99,8 +99,7 @@ test infrastructure must never be added to this repository.
   browser suite's first run had one loaded-host Worker timeout; that test passed
   alone in 4.87 seconds and the complete clean rerun then passed.
 - The final Windows debug build completed after embedding the r2 resources and
-  the timestamp fix. The no-Release Actions gate is now accepted; the remaining
-  hard gates are the successful tagged release and asset/checksum audit.
+  the timestamp fix. The no-Release and tagged Actions gates are accepted.
 - The first hosted no-Release matrix (`32703984828`, commit `15b2e8f88`)
   confirmed Web packaging, lint, unit, browser, KOReader, extension, Tauri,
   Android, iOS, macOS and both Windows builds. It exposed two release-gate
@@ -123,8 +122,17 @@ test infrastructure must never be added to this repository.
   every job successful: metadata, Web/Tauri tests, Web/companion packaging,
   Android, unsigned iOS, macOS universal, Linux x64/arm64, Windows x64/arm64,
   and aggregate checksum verification. The publish job was correctly skipped
-  because this was a branch dispatch. The remaining gates are the tagged run,
-  formal Release publication and final asset/checksum audit.
+  because this was a branch dispatch.
+- Tagged run `32714081064` repeated the complete matrix at
+  `v0.12.1-r2` / `deeb634e9`, passed every build and test, generated the
+  aggregate checksums, and published the formal non-draft, non-prerelease
+  [Readest Remote 0.12.1-r2](https://github.com/WenHe233/readest-remote/releases/tag/v0.12.1-r2)
+  Release.
+- The published Release contains `16` platform/companion artifacts plus
+  `SHA256SUMS.txt`. A post-publication audit downloaded all `17` files
+  (`1,200,972,558` bytes), matched every GitHub asset size, matched all `16`
+  asset names one-to-one with the checksum manifest, and independently
+  recomputed every SHA-256 with zero mismatches.
 
 ### Upgrade-time Chinese catalogue refresh — Windows runtime accepted
 
