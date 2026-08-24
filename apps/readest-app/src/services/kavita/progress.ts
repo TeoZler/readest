@@ -30,7 +30,17 @@ export function getKavitaProgressFraction(progress: BookProgress): number {
 }
 
 export function getKavitaRemoteProgressUpdatedAt(progress: KavitaReaderProgressDto): number {
-  const parsed = Date.parse(progress.lastModifiedUtc || '');
+  const raw = progress.lastModifiedUtc?.trim() ?? '';
+  // Kavita 0.9.0.2 serializes this UTC field without a trailing `Z`, for
+  // example `2026-08-24T07:25:16.1120414`. Date.parse treats a zone-less
+  // date-time as local time, which makes every Kavita timestamp appear eight
+  // hours stale on a UTC+8 device and causes fresh remote progress to be
+  // overwritten. Preserve explicit offsets, but interpret Kavita's zone-less
+  // date-time as the UTC value its field name and server implementation
+  // promise.
+  const hasExplicitZone = /(?:z|[+-]\d{2}:?\d{2})$/i.test(raw);
+  const normalized = raw.includes('T') && !hasExplicitZone ? `${raw}Z` : raw;
+  const parsed = Date.parse(normalized);
   return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
 }
 

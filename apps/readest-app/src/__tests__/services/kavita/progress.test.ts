@@ -6,6 +6,7 @@ import {
   decideKavitaProgress,
   fromKavitaBookScrollId,
   getKavitaLocalProgressUpdatedAt,
+  getKavitaRemoteProgressUpdatedAt,
   toKavitaBookScrollId,
   type KavitaResolvedRemoteProgress,
 } from '@/services/kavita/progress';
@@ -114,6 +115,24 @@ describe('Kavita progress', () => {
   it('does not treat the initial page-one relocate as newer local reading', () => {
     expect(getKavitaLocalProgressUpdatedAt([1, 100], 50_000)).toBe(0);
     expect(getKavitaLocalProgressUpdatedAt([2, 100], 50_000)).toBe(50_000);
+  });
+
+  it('interprets Kavita zone-less lastModifiedUtc values as UTC', () => {
+    const zoneLess = {
+      ...dto(0),
+      lastModifiedUtc: '2026-08-24T07:25:16.1120414',
+    };
+    expect(getKavitaRemoteProgressUpdatedAt(zoneLess)).toBe(
+      Date.parse('2026-08-24T07:25:16.1120414Z'),
+    );
+
+    const explicitOffset = {
+      ...dto(0),
+      lastModifiedUtc: '2026-08-24T07:25:16.112+08:00',
+    };
+    expect(getKavitaRemoteProgressUpdatedAt(explicitOffset)).toBe(
+      Date.parse('2026-08-24T07:25:16.112+08:00'),
+    );
   });
 
   it('discards the r1 KOReader queue instead of replaying its coarse payload', () => {

@@ -6,7 +6,7 @@ test infrastructure must never be added to this repository.
 
 ## 0.12.1-r2 corrective work
 
-### Native Reader progress — implemented, runtime acceptance pending
+### Native Reader progress — Windows runtime accepted
 
 - Replaced the Readest-owned KOReader progress route with Kavita's native
   `GET /api/Reader/get-progress` and `POST /api/Reader/progress` endpoints.
@@ -18,11 +18,26 @@ test infrastructure must never be added to this repository.
   discarded rather than replayed.
 - `KavitaBookSource.filePages` is populated during catalog mapping and remains
   optional for r1 rows until their next refresh.
-- Verification: TypeScript type check passed; targeted client/mapper/progress
-  suites passed (`3` files, `18` tests). Real Auth Key GET/POST and Windows
-  reader round-trip remain release gates.
+- Real Kavita `0.9.0.2` acceptance used chapter `452` (222 file pages) and the
+  non-admin Download-role Auth Key. Readest restored the server's
+  `pageNum=110` / `//body/p[1]`, then a TOC move wrote
+  `pageNum=111` / `//body/div/h2`; closing and reopening restored the same
+  chapter (`第103话`).
+- Runtime testing exposed that Kavita serializes `lastModifiedUtc` without a
+  trailing timezone designator. JavaScript previously interpreted that value
+  as local time, making every remote update appear eight hours old on UTC+8
+  and silently pushing the local position. Zone-less Kavita date-times are now
+  parsed as UTC while explicit offsets remain unchanged; a regression test
+  covers both forms.
+- After the fix, a simulated Kavita Web Reader write to `pageNum=150` produced
+  the expected conflict (`46.58%` local versus `65.41%` Kavita). Selecting the
+  Kavita position navigated to `第140话`, retained the exact XPath record, and
+  reopened at the same chapter.
+- Verification: targeted progress suite passed (`1` file, `9` tests), the
+  rebuilt Windows debug application passed both Reader directions, and Auth
+  Keys remained absent from output and committed state.
 
-### Stable shelf cover URLs — implemented, runtime acceptance pending
+### Stable shelf cover URLs — Windows runtime accepted
 
 - Kavita covers remain visibility-triggered, but a successfully loaded URL is
   retained for the application session instead of being evicted after 64
@@ -32,9 +47,10 @@ test infrastructure must never be added to this repository.
   decodes successfully, and manual cache clearing revokes runtime Blob URLs.
 - Runtime-backed native cache files are protected from LRU eviction until the
   session ends, preventing a remounted card from receiving a stale file URL.
-- Verification: TypeScript type check passed; component/API/cache suites passed
-  (`3` files, `14` tests). The 715-book scroll-back network/runtime check remains
-  a Windows release gate.
+- Verification: the real catalog exposed 675 supported EPUB books. A scroll to
+  a new region loaded 131 chapter covers using 131 GETs for 131 unique chapter
+  IDs. Returning to the already-rendered region kept every cover visible and
+  left the log at 131 requests with zero duplicates and no EPUB Range fallback.
 
 ### Kavita shelf badge controls — implemented
 
@@ -45,10 +61,12 @@ test infrastructure must never be added to this repository.
   card mode; grouped cover previews never rendered these badges and remain
   unchanged.
 - Verification: TypeScript type check passed; badge combinations and settings
-  backup regression passed (`2` files, `25` tests). Chinese labels are tracked
-  by the r2 localization gate below.
+  backup regression passed (`2` files, `25` tests). Windows runtime confirmed
+  both Chinese labels, both defaults enabled, and the independent combination
+  where `Kavita` is hidden while `Online` remains visible; the default was
+  restored after the check.
 
-### iOS icons, Chinese localization, and r2 identity — implemented; CI acceptance pending
+### iOS icons, Chinese localization, and r2 identity — local acceptance complete; CI pending
 
 - The unsigned IPA post-processing step now keeps `Assets.car`, generates a
   complete opaque RGB legacy icon set in the application bundle, and rebuilds
@@ -61,8 +79,10 @@ test infrastructure must never be added to this repository.
   native Reader progress messages. A regression test rejects missing or
   placeholder values in either locale.
 - Verification: TypeScript, shell syntax, release-identity/progress tests and
-  both Chinese coverage suites passed locally. Windows runtime acceptance and
-  the hosted all-platform package matrix remain release gates.
+  both Chinese coverage suites passed locally. The rebuilt Windows application
+  displayed the Kavita connection form, cache controls and both badge labels
+  in Simplified Chinese. The hosted all-platform package matrix remains a
+  release gate.
 
 ### 0.12.1-r2 release preparation — implemented; final gates pending
 
@@ -77,7 +97,7 @@ test infrastructure must never be added to this repository.
   local regression appropriate to this host, one no-Release Actions matrix,
   and the successful tagged release plus asset/checksum audit.
 
-### Upgrade-time Chinese catalogue refresh — implemented; runtime recheck pending
+### Upgrade-time Chinese catalogue refresh — Windows runtime accepted
 
 - The first r2 Windows acceptance run found that an existing r1 WebView profile
   could reuse its unversioned locale response and still show Kavita settings in
@@ -89,7 +109,8 @@ test infrastructure must never be added to this repository.
   any service-worker registrations inherited from older builds; Web/PWA keeps
   its current worker behavior.
 - The packaged `zh-CN` catalogue was independently confirmed to contain the new
-  values. A rebuilt Windows runtime recheck remains required.
+  values. A rebuilt Windows runtime using the existing profile displayed the
+  previously stale Kavita strings in Chinese, confirming the upgrade path.
 
 ## Locked baseline
 
@@ -134,26 +155,15 @@ Results on 2026-08-19:
 
 ## Current blockers
 
-- The second no-Release GitHub Actions matrix (`32366200061`) is in progress.
-  Its Web, browser, KOReader/LuaJIT, Calibre, Rust/Tauri and Web-components
-  gates passed. Clean runners exposed three packaging gaps: Windows ARM64 used
-  an unsupported native Node/workerd combination, iOS lacked the Widget
-  `Info.plist`, and Android did not regenerate its ignored Gradle scaffold.
-  All three fixes and regression assertions are complete locally; a replacement
-  matrix remains required after the current run finishes collecting evidence.
-- The stable Readest Remote Android release keystore exists outside every Git
-  repository in an encrypted recovery archive. The product owner confirmed
-  saving its recovery password, all five GitHub signing Secrets are configured,
-  and local fresh-install plus same-certificate upgrade acceptance passed.
-- Readest account/cloud login under the new callback identity has not been
-  validated with an account. Google Drive is disabled unless a Remote-owned
-  OAuth client is explicitly supplied; the fork no longer embeds or registers
-  Readest's Google OAuth identity.
-- Positive Web connectivity to an unmodified Kavita `v0.9.0.2` production
-  server is unavailable: real catalog and Range preflights returned `204`
-  without `Access-Control-Allow-Origin` or allowed/exposed header fields. This
-  is the documented conditional-Web boundary; Readest classifies and explains
-  it instead of adding a private-network proxy or weakening browser security.
+- No local product blocker is known for r2. The remaining pre-tag hard gate is
+  a successful no-Release GitHub Actions matrix at the final r2 commit.
+- The tagged workflow must then pass the same platform matrix, publish the
+  exact r2 asset manifest and a verified `SHA256SUMS.txt`. iOS TrollStore
+  new-install and r1-upgrade icon checks remain the explicitly non-blocking
+  post-release device verification from the locked plan.
+- Positive Web connectivity to an unmodified Kavita `v0.9.0.2` server remains
+  conditional on operator-provided CORS/Range configuration; the fork does not
+  add a private-network proxy or weaken browser security.
 
 ## Phase 1 real-server evidence
 
