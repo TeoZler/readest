@@ -149,6 +149,36 @@ export async function readKavitaCoverCache(
   });
 }
 
+/**
+ * Resolve cache metadata without materializing the payload as a Blob. Native
+ * shelves use this to hand the WebView a stable asset URL for the on-disk file,
+ * matching the lifecycle of ordinary Readest covers.
+ */
+export async function readKavitaCoverCacheEntry(
+  appService: AppService,
+  source: KavitaBookSource,
+): Promise<KavitaCoverCacheEntry | null> {
+  return withCacheLock(async () => {
+    const settings = getKavitaCoverCacheSettings();
+    if (!settings.enabled || settings.capacityBytes <= 0) return null;
+    const index = await readIndex(appService);
+    const key = kavitaCoverCacheKey(source);
+    const entry = index.entries[key];
+    if (!entry || entry.sourceVersion !== kavitaCoverSourceVersion(source)) return null;
+    if (!(await appService.exists(entry.path, 'Data'))) {
+      delete index.entries[key];
+      await writeIndex(appService, index);
+      return null;
+    }
+    const now = Date.now();
+    if (now - entry.lastAccessedAt >= ACCESS_WRITE_INTERVAL_MS) {
+      entry.lastAccessedAt = now;
+      await writeIndex(appService, index);
+    }
+    return { ...entry };
+  });
+}
+
 const evictIndex = async (
   appService: AppService,
   index: KavitaCoverCacheIndex,

@@ -5,8 +5,9 @@ import BookCover from '@/components/BookCover';
 import { Book } from '@/types/book';
 
 const acquireKavitaCoverUrl = vi.hoisted(() => vi.fn());
+const peekKavitaCoverUrl = vi.hoisted(() => vi.fn(() => null as string | null));
 
-vi.mock('@/services/kavita/cover', () => ({ acquireKavitaCoverUrl }));
+vi.mock('@/services/kavita/cover', () => ({ acquireKavitaCoverUrl, peekKavitaCoverUrl }));
 
 vi.mock('next/image', () => ({
   __esModule: true,
@@ -19,6 +20,8 @@ vi.mock('next/image', () => ({
 afterEach(() => {
   cleanup();
   acquireKavitaCoverUrl.mockReset();
+  peekKavitaCoverUrl.mockReset();
+  peekKavitaCoverUrl.mockReturnValue(null);
   vi.unstubAllGlobals();
 });
 
@@ -174,5 +177,29 @@ describe('BookCover', () => {
     expect(disconnect).toHaveBeenCalled();
     unmount();
     expect(release).toHaveBeenCalledOnce();
+  });
+
+  it('reuses an already loaded Kavita URL when a virtualized card remounts', async () => {
+    const release = vi.fn();
+    acquireKavitaCoverUrl.mockReturnValue({
+      url: Promise.resolve('blob:stable-kavita-cover'),
+      release,
+    });
+    const book = makeBook({ kavitaSource: makeKavitaSource() });
+    const first = render(<BookCover book={book} coverFit='crop' />);
+    await waitFor(() => {
+      expect(first.container.querySelector('img.cover-image')?.getAttribute('src')).toBe(
+        'blob:stable-kavita-cover',
+      );
+    });
+    first.unmount();
+    expect(release).toHaveBeenCalledOnce();
+
+    peekKavitaCoverUrl.mockReturnValue('blob:stable-kavita-cover');
+    const second = render(<BookCover book={book} coverFit='crop' />);
+    expect(second.container.querySelector('img.cover-image')?.getAttribute('src')).toBe(
+      'blob:stable-kavita-cover',
+    );
+    expect(acquireKavitaCoverUrl).toHaveBeenCalledOnce();
   });
 });

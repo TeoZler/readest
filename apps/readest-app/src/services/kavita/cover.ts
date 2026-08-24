@@ -11,6 +11,7 @@ import {
   kavitaCoverCacheKey,
   kavitaCoverSourceVersion,
   readKavitaCoverCache,
+  readKavitaCoverCacheEntry,
   touchKavitaCoverCacheValidation,
   writeKavitaCoverCache,
   type KavitaCoverCacheEntry as PersistentCoverEntry,
@@ -27,7 +28,6 @@ import { fetchNativeKavitaCover } from './nativeCoverTransport';
 import { AbortableTaskPool } from './abortableTaskPool';
 
 const LEGACY_COVER_MARKER = 'kavita-cover-version.txt';
-const MAX_MEMORY_COVERS = 64;
 const MAX_CONCURRENT_FETCHES = 6;
 const MAX_COVER_BYTES = 16 * 1024 * 1024;
 const REVALIDATE_AFTER_MS = 24 * 60 * 60 * 1000;
@@ -46,7 +46,6 @@ interface RuntimeCoverEntry {
   refs: number;
   settled: boolean;
   objectUrl?: string;
-  lastAccessedAt: number;
 }
 
 interface ConnectionFailureState {
@@ -476,11 +475,10 @@ async function deleteLegacyCover(appService: AppService, book: Book): Promise<vo
 }
 
 const protectedCacheKeys = (): Set<string> =>
-  new Set(
-    Array.from(coverEntries.values())
-      .filter((entry) => entry.refs > 0 || !entry.settled)
-      .map((entry) => entry.key),
-  );
+  // Native runtime URLs point at these cache files. Protect every URL acquired
+  // in this session, not just currently mounted cards, so virtualization cannot
+  // leave a stable URL pointing at an LRU-deleted file.
+  new Set(Array.from(coverEntries.values()).map((entry) => entry.key));
 
 const persistCoverInBackground = (
   appService: AppService,
@@ -543,12 +541,34 @@ async function refreshPersistentCover(
 
 async function loadCover(book: Book, signal: AbortSignal): Promise<string> {
   const appService = await environmentConfig.getAppService();
-  const persistent = await readKavitaCoverCache(appService, book.kavitaSource!);
+  const source = book.kavitaSource!;
+  const nativeEntry = isTauriAppPlatform()
+    ? await readKavitaCoverCacheEntry(appService, source)
+    : null;
+  if (nativeEntry) {
+    if (Date.now() - nativeEntry.lastValidatedAt >= REVALIDATE_AFTER_MS) {
+      void withFetchSlot(signal, () =>
+        refreshPersistentCover(appService, book, signal, nativeEntry),
+      )
+        .then((blob) => {
+          if (blob) replaceRuntimeCoverUrl(book, URL.createObjectURL(blob));
+        })
+        .catch(() => undefined);
+    }
+    const path = await appService.resolveFilePath(nativeEntry.path, 'Data');
+    return await appService.getImageURL(path);
+  }
+
+  const persistent = await readKavitaCoverCache(appService, source);
   if (persistent) {
     if (Date.now() - persistent.entry.lastValidatedAt >= REVALIDATE_AFTER_MS) {
       void withFetchSlot(signal, () =>
         refreshPersistentCover(appService, book, signal, persistent.entry),
-      ).catch(() => undefined);
+      )
+        .then((blob) => {
+          if (blob) replaceRuntimeCoverUrl(book, URL.createObjectURL(blob));
+        })
+        .catch(() => undefined);
     }
     return URL.createObjectURL(persistent.blob);
   }
@@ -574,16 +594,24 @@ async function loadCover(book: Book, signal: AbortSignal): Promise<string> {
   return URL.createObjectURL(blob);
 }
 
-function evictIdleCovers(): void {
-  if (coverEntries.size <= MAX_MEMORY_COVERS) return;
-  const idle = Array.from(coverEntries.values())
-    .filter((entry) => entry.settled && entry.refs === 0)
-    .sort((a, b) => a.lastAccessedAt - b.lastAccessedAt);
-  while (coverEntries.size > MAX_MEMORY_COVERS && idle.length > 0) {
-    const entry = idle.shift()!;
-    coverEntries.delete(entry.key);
-    if (entry.objectUrl) URL.revokeObjectURL(entry.objectUrl);
-  }
+const revokeIfBlobUrl = (url: string | undefined): void => {
+  if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
+};
+
+function replaceRuntimeCoverUrl(book: Book, url: string): void {
+  const entry = coverEntries.get(runtimeKey(book));
+  if (!entry || entry.controller.signal.aborted || entry.objectUrl === url) return;
+  const previous = entry.objectUrl;
+  entry.objectUrl = url;
+  entry.promise = Promise.resolve(url);
+  revokeIfBlobUrl(previous);
+  void eventDispatcher.dispatch('kavita-cover-updated', { key: runtimeKey(book), url });
+}
+
+export function peekKavitaCoverUrl(book: Book): string | null {
+  if (!book.kavitaSource) return null;
+  const entry = coverEntries.get(runtimeKey(book));
+  return entry?.settled && entry.objectUrl ? entry.objectUrl : null;
 }
 
 export function acquireKavitaCoverUrl(book: Book): KavitaCoverLease | null {
@@ -599,14 +627,12 @@ export function acquireKavitaCoverUrl(book: Book): KavitaCoverLease | null {
       controller,
       refs: 0,
       settled: false,
-      lastAccessedAt: Date.now(),
       promise: Promise.resolve(''),
     };
     created.promise = loadCover(book, controller.signal)
       .then((url) => {
         created.settled = true;
         created.objectUrl = url;
-        evictIdleCovers();
         return url;
       })
       .catch((error) => {
@@ -619,7 +645,6 @@ export function acquireKavitaCoverUrl(book: Book): KavitaCoverLease | null {
   }
 
   entry.refs += 1;
-  entry.lastAccessedAt = Date.now();
   let released = false;
   return {
     url: entry.promise,
@@ -627,9 +652,7 @@ export function acquireKavitaCoverUrl(book: Book): KavitaCoverLease | null {
       if (released) return;
       released = true;
       entry!.refs = Math.max(0, entry!.refs - 1);
-      entry!.lastAccessedAt = Date.now();
       if (entry!.refs === 0 && !entry!.settled) entry!.controller.abort();
-      evictIdleCovers();
     },
   };
 }
@@ -643,7 +666,7 @@ export function clearKavitaCoverUrls(connectionId?: string): void {
   for (const [key, entry] of coverEntries) {
     if (connectionId && entry.connectionId !== connectionId) continue;
     entry.controller.abort();
-    if (entry.objectUrl) URL.revokeObjectURL(entry.objectUrl);
+    revokeIfBlobUrl(entry.objectUrl);
     coverEntries.delete(key);
   }
 }

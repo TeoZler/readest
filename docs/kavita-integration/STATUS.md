@@ -22,6 +22,20 @@ test infrastructure must never be added to this repository.
   suites passed (`3` files, `18` tests). Real Auth Key GET/POST and Windows
   reader round-trip remain release gates.
 
+### Stable shelf cover URLs — implemented, runtime acceptance pending
+
+- Kavita covers remain visibility-triggered, but a successfully loaded URL is
+  retained for the application session instead of being evicted after 64
+  virtualized cards.
+- Native cache hits now resolve directly to the on-disk Data asset URL; Web
+  retains a session Blob URL. Revalidation swaps only after a replacement image
+  decodes successfully, and manual cache clearing revokes runtime Blob URLs.
+- Runtime-backed native cache files are protected from LRU eviction until the
+  session ends, preventing a remounted card from receiving a stale file URL.
+- Verification: TypeScript type check passed; component/API/cache suites passed
+  (`3` files, `14` tests). The 715-book scroll-back network/runtime check remains
+  a Windows release gate.
+
 ## Locked baseline
 
 - Readest: `v0.12.1` / `f3e1df7e0572c0119cbb420e1e27ca9af859f91c`

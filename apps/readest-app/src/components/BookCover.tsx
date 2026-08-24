@@ -4,7 +4,8 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { Book } from '@/types/book';
 import { LibraryCoverFitType, LibraryViewModeType } from '@/types/settings';
 import { formatAuthors, formatTitle } from '@/utils/book';
-import { acquireKavitaCoverUrl } from '@/services/kavita/cover';
+import { eventDispatcher } from '@/utils/event';
+import { acquireKavitaCoverUrl, peekKavitaCoverUrl } from '@/services/kavita/cover';
 
 interface BookCoverProps {
   book: Book;
@@ -33,8 +34,6 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
     const coverRef = useRef<HTMLDivElement>(null);
     const [imageLoaded, setImageLoaded] = useState(false);
     const [imageError, setImageError] = useState(false);
-    const [kavitaCoverUrl, setKavitaCoverUrl] = useState<string | null>(null);
-    const [visibleKavitaCoverKey, setVisibleKavitaCoverKey] = useState<string | null>(null);
     const kavitaCoverKey = book.kavitaSource
       ? [
           book.hash,
@@ -46,6 +45,13 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
           book.kavitaSource.fileCreated,
         ].join(':')
       : null;
+    const [kavitaCoverState, setKavitaCoverState] = useState<{
+      key: string | null;
+      url: string | null;
+    }>(() => ({ key: kavitaCoverKey, url: peekKavitaCoverUrl(book) }));
+    const [visibleKavitaCoverKey, setVisibleKavitaCoverKey] = useState<string | null>(null);
+    const kavitaCoverUrl =
+      kavitaCoverState.key === kavitaCoverKey ? kavitaCoverState.url : peekKavitaCoverUrl(book);
 
     const shouldShowSpine = showSpine && imageLoaded && !imageError;
 
@@ -104,18 +110,20 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
     }, [kavitaCoverKey]);
 
     useEffect(() => {
-      setKavitaCoverUrl(null);
       if (!book.kavitaSource || visibleKavitaCoverKey !== kavitaCoverKey) return;
+      const cachedUrl = peekKavitaCoverUrl(book);
+      setKavitaCoverState({ key: kavitaCoverKey, url: cachedUrl });
+      if (cachedUrl) return;
       const lease = acquireKavitaCoverUrl(book);
       if (!lease) return;
       let active = true;
       void lease.url
         .then((url) => {
-          if (active) setKavitaCoverUrl(url);
+          if (active) setKavitaCoverState({ key: kavitaCoverKey, url });
         })
         .catch((error) => {
           if (!active || (error instanceof DOMException && error.name === 'AbortError')) return;
-          setKavitaCoverUrl(null);
+          setKavitaCoverState({ key: kavitaCoverKey, url: null });
         });
       return () => {
         active = false;
@@ -132,6 +140,18 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
       kavitaCoverKey,
       visibleKavitaCoverKey,
     ]);
+
+    useEffect(() => {
+      if (!kavitaCoverKey) return;
+      const updated = (event: CustomEvent) => {
+        const detail = event.detail as { key?: string; url?: string };
+        if (detail.key === kavitaCoverKey && detail.url) {
+          setKavitaCoverState({ key: kavitaCoverKey, url: detail.url });
+        }
+      };
+      eventDispatcher.on('kavita-cover-updated', updated);
+      return () => eventDispatcher.off('kavita-cover-updated', updated);
+    }, [kavitaCoverKey]);
 
     const coverUrl = kavitaCoverUrl || book.metadata?.coverImageUrl || book.coverImageUrl || '';
 
