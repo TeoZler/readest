@@ -2,6 +2,8 @@ import i18n from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import translatableLngs from '../../i18n-langs.json';
 import packageJson from '../../package.json';
+import zhCN from '../../public/locales/zh-CN/translation.json';
+import zhTW from '../../public/locales/zh-TW/translation.json';
 import { initReactI18next } from 'react-i18next';
 
 // 'en' is the source language and not listed in the translatable set.
@@ -44,6 +46,14 @@ const initI18n = async () => {
       },
       ns: ['translation'],
       defaultNS: 'translation',
+      // Bundle the two Remote-supported Chinese catalogues into hashed JS.
+      // WebView can otherwise reuse an old unversioned public asset across an
+      // application upgrade even when the packaged JSON has changed.
+      partialBundledLanguages: true,
+      resources: {
+        'zh-CN': { translation: zhCN },
+        'zh-TW': { translation: zhTW },
+      },
       ...(isBrowser && {
         backend: {
           loadPath: `/locales/{{lng}}/{{ns}}.json?v=${localeAssetVersion}`,

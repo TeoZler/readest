@@ -83,8 +83,11 @@ test infrastructure must never be added to this repository.
   could reuse its unversioned locale response and still show Kavita settings in
   English even though the packaged r2 JSON was complete.
 - Locale requests now include the public package version and use `no-store`.
-  Native startup also removes any service-worker registrations inherited from
-  older builds; Web/PWA keeps its current worker behavior.
+  Because the Windows WebView subsequently proved it can still reuse the old
+  Tauri asset while ignoring the query distinction, both Chinese catalogues
+  are also bundled into hashed application JavaScript. Native startup removes
+  any service-worker registrations inherited from older builds; Web/PWA keeps
+  its current worker behavior.
 - The packaged `zh-CN` catalogue was independently confirmed to contain the new
   values. A rebuilt Windows runtime recheck remains required.
 

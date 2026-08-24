@@ -131,6 +131,9 @@ describe('Readest Remote release identity', () => {
     const i18n = read('src/i18n/i18n.ts');
     expect(i18n).toContain('packageJson.version');
     expect(i18n).toContain("cache: 'no-store'");
+    expect(i18n).toContain("import zhCN from '../../public/locales/zh-CN/translation.json'");
+    expect(i18n).toContain("import zhTW from '../../public/locales/zh-TW/translation.json'");
+    expect(i18n).toContain('partialBundledLanguages: true');
     expect(i18n).toContain('.getRegistrations()');
     expect(i18n).toContain('registration.unregister()');
   });
