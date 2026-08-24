@@ -17,7 +17,7 @@ class PluginVersionTest(unittest.TestCase):
 
     def test_remote_revision_is_the_fourth_calibre_version_part(self):
         version = app_version()
-        self.assertEqual(version, (0, 12, 1, 1))
+        self.assertEqual(version, (0, 12, 1, 2))
         self.assertTrue(all(isinstance(part, int) for part in version))
 
     def test_upstream_version_remains_a_three_part_tuple(self):

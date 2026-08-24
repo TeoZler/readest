@@ -101,6 +101,12 @@ test infrastructure must never be added to this repository.
 - The final Windows debug build completed after embedding the r2 resources and
   the timestamp fix. Remaining hard gates are one no-Release Actions matrix at
   the final commit and the successful tagged release plus asset/checksum audit.
+- The first hosted no-Release matrix (`32703984828`, commit `15b2e8f88`)
+  confirmed metadata, Web packaging, lint, unit, browser, KOReader and browser
+  extension gates before exposing one release-identity omission: the committed
+  Calibre `PLUGIN_VERSION` still ended in revision `1`. It now ends in `2`,
+  matches the app's `0.12.1-r2` version, and all `113` Calibre tests pass
+  locally. A replacement full matrix remains mandatory before tagging.
 
 ### Upgrade-time Chinese catalogue refresh — Windows runtime accepted
 
