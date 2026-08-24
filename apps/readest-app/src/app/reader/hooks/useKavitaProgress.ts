@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBookDataStore } from '@/store/bookDataStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import { getBookProgress, useBookProgress } from '@/store/readerProgressStore';
 import { useReaderStore } from '@/store/readerStore';
 import { debounce } from '@/utils/debounce';
@@ -44,6 +45,7 @@ const pageFraction = (pageNum: number, sections: Array<{ size?: number }>): numb
 };
 
 export const useKavitaProgress = (bookKey: string) => {
+  const _ = useTranslation();
   const getBookData = useBookDataStore((state) => state.getBookData);
   const book = useBookDataStore((state) => state.getBookData(bookKey)?.book ?? null);
   const getView = useReaderStore((state) => state.getView);
@@ -157,12 +159,12 @@ export const useKavitaProgress = (bookKey: string) => {
       if (!view) return;
       if (remote.cfi) await Promise.resolve(view.goTo(remote.cfi));
       else await Promise.resolve(view.goTo(Math.max(0, remote.dto.pageNum)));
-      eventDispatcher.dispatch('hint', { bookKey, message: 'Reading Progress Synced' });
+      eventDispatcher.dispatch('hint', { bookKey, message: _('Reading Progress Synced') });
       setSyncState('synced');
       setConflictDetails(null);
       conflictRemoteRef.current = null;
     },
-    [bookKey, getView],
+    [_, bookKey, getView],
   );
 
   const pullProgress = useCallback(async () => {
@@ -207,7 +209,9 @@ export const useKavitaProgress = (bookKey: string) => {
           bookDoc: bookData.bookDoc,
           local: {
             cfi: progress.location,
-            preview: `Approximately ${(getKavitaProgressFraction(progress) * 100).toFixed(2)}%`,
+            preview: _('Approximately {{percentage}}%', {
+              percentage: (getKavitaProgressFraction(progress) * 100).toFixed(2),
+            }),
           },
           remote: {
             dto,
@@ -215,7 +219,13 @@ export const useKavitaProgress = (bookKey: string) => {
             fraction: remote.fraction,
             approximate: remote.approximate,
             device: 'Kavita',
-            preview: `${remote.approximate ? 'Approximate legacy position' : 'Approximately'} ${(remote.fraction * 100).toFixed(2)}%`,
+            preview: remote.approximate
+              ? _('Approximate legacy position · {{percentage}}%', {
+                  percentage: (remote.fraction * 100).toFixed(2),
+                })
+              : _('Approximately {{percentage}}%', {
+                  percentage: (remote.fraction * 100).toFixed(2),
+                }),
           },
         });
         setSyncState('conflict');
@@ -234,6 +244,7 @@ export const useKavitaProgress = (bookKey: string) => {
       console.warn('Kavita progress pull failed:', redactKavitaSecret(error, runtime?.authKey));
     }
   }, [
+    _,
     applyRemote,
     book,
     bookKey,

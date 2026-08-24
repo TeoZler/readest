@@ -156,6 +156,9 @@ jobs:
             --version "$version" \
             --out "release/Readest-Remote_${version}_koreader-plugin.zip"
           node -e "const m=require('./apps/readest-app/out/manifest.json'); if(m.name!=='Readest Remote') throw new Error('bad PWA name')"
+          node -e "const fs=require('fs'),m=require('./apps/readest-app/out/manifest.json'); if(!Array.isArray(m.icons)||!m.icons.length||m.icons.some(i=>!fs.existsSync('apps/readest-app/out/'+i.src.replace(/^\//,'')))) throw new Error('missing PWA icon')"
+          test -s apps/readest-app/out/favicon.ico
+          test -s apps/readest-app/out/apple-touch-icon.png
           test -s apps/readest-app/out/sw.js
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -220,6 +223,10 @@ jobs:
           if ($info.ProductName -ne 'Readest Remote' -or $info.ProductVersion -ne $windowsVersion) {
             throw "Unexpected Windows identity: $($info.ProductName) $($info.ProductVersion)"
           }
+          Add-Type -AssemblyName System.Drawing
+          $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($binary)
+          if (-not $icon -or $icon.Width -lt 16 -or $icon.Height -lt 16) { throw 'Windows executable icon missing' }
+          $icon.Dispose()
           Copy-Item $installer.FullName "release/Readest-Remote_${env:RELEASE_VERSION}_windows-${env:RELEASE_ARCH}-setup.exe"
       - name: Build Windows portable executable
         working-directory: apps/readest-app
@@ -302,6 +309,8 @@ jobs:
           deb=$(find "$root/deb" -maxdepth 1 -type f -name '*.deb' -print -quit)
           test -n "$appimage" && test -n "$deb"
           test "$(dpkg-deb -f "$deb" Version)" = "$version"
+          dpkg-deb -c "$deb" | grep -Eq '/usr/share/applications/.+\.desktop$'
+          dpkg-deb -c "$deb" | grep -Eq '/usr/share/icons/.+\.(png|svg)$'
           mkdir -p release
           cp "$appimage" "release/Readest-Remote_${version}_linux-${{ matrix.arch }}.AppImage"
           cp "$deb" "release/Readest-Remote_${version}_linux-${{ matrix.arch }}.deb"
@@ -352,6 +361,9 @@ jobs:
           app=$(find "$mount" -maxdepth 1 -type d -name '*.app' -print -quit)
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Contents/Info.plist")" = 'io.github.wenhe233.readestremote'
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")" = "$version"
+          icon_file=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$app/Contents/Info.plist")
+          [[ "$icon_file" == *.icns ]] || icon_file="${icon_file}.icns"
+          test -s "$app/Contents/Resources/$icon_file"
           mkdir -p release
           cp "$dmg" "release/Readest-Remote_${version}_macos-universal.dmg"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -462,6 +474,7 @@ jobs:
             badging=$($aapt dump badging "$apk")
             grep -q "package: name='io.github.wenhe233.readestremote' versionCode='12001001' versionName='${{ needs.metadata.outputs.version }}'" <<< "$badging"
             grep -q "application-label:'Readest Remote'" <<< "$badging"
+            grep -q 'application-icon-' <<< "$badging"
             if grep -q 'com.android.vending.BILLING' <<< "$badging"; then
               echo "Unexpected Play Billing permission in $apk" >&2
               exit 1
@@ -521,6 +534,7 @@ jobs:
           pnpm tauri ios build --ci --no-sign
           ipa=$(find src-tauri/gen/apple/build -type f -name '*.ipa' -print -quit)
           test -s "$ipa"
+          scripts/prepare-ios-trollstore-icons.sh "$ipa"
           stage="$RUNNER_TEMP/ipa-inspect"
           mkdir -p "$stage"
           unzip -q "$ipa" -d "$stage"
@@ -532,6 +546,22 @@ jobs:
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$info")" = 'io.github.wenhe233.readestremote'
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$info")" = "$apple_version"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$info")" = '12001001'
+          test -s "$app/Assets.car"
+          for icon in \
+            AppIcon20x20@2x.png AppIcon20x20@3x.png \
+            AppIcon29x29@2x.png AppIcon29x29@3x.png \
+            AppIcon40x40@2x.png AppIcon40x40@3x.png \
+            AppIcon60x60@2x.png AppIcon60x60@3x.png \
+            AppIcon20x20~ipad.png AppIcon20x20@2x~ipad.png \
+            AppIcon29x29~ipad.png AppIcon29x29@2x~ipad.png \
+            AppIcon40x40~ipad.png AppIcon40x40@2x~ipad.png \
+            AppIcon76x76~ipad.png AppIcon76x76@2x~ipad.png \
+            AppIcon83.5x83.5@2x~ipad.png; do
+            test -s "$app/$icon"
+            ! sips -g hasAlpha "$app/$icon" | grep -q 'yes'
+          done
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName' "$info")" = 'AppIcon'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIcons~ipad:CFBundlePrimaryIcon:CFBundleIconName' "$info")" = 'AppIcon'
           mkdir -p "$GITHUB_WORKSPACE/release"
           cp "$ipa" "$GITHUB_WORKSPACE/release/Readest-Remote_${{ needs.metadata.outputs.version }}_ios-arm64.ipa"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

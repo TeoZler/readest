@@ -48,6 +48,22 @@ test infrastructure must never be added to this repository.
   backup regression passed (`2` files, `25` tests). Chinese labels are tracked
   by the r2 localization gate below.
 
+### iOS icons, Chinese localization, and r2 identity — implemented; CI acceptance pending
+
+- The unsigned IPA post-processing step now keeps `Assets.car`, generates a
+  complete opaque RGB legacy icon set in the application bundle, and rebuilds
+  both iPhone and iPad `CFBundleIcons` declarations for TrollStore 2.1.1+.
+- Release jobs now reject missing Web/PWA, Windows, Linux, macOS, Android, or
+  iOS package icons. The iOS check additionally verifies every legacy PNG has
+  no alpha channel and that both plist icon dictionaries name `AppIcon`.
+- Simplified and Traditional Chinese now cover every statically discoverable
+  UI key, including all Kavita connection/cache/badge settings and approximate
+  native Reader progress messages. A regression test rejects missing or
+  placeholder values in either locale.
+- Verification: TypeScript, shell syntax, release-identity/progress tests and
+  both Chinese coverage suites passed locally. Windows runtime acceptance and
+  the hosted all-platform package matrix remain release gates.
+
 ## Locked baseline
 
 - Readest: `v0.12.1` / `f3e1df7e0572c0119cbb420e1e27ca9af859f91c`
