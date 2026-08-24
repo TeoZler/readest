@@ -93,9 +93,14 @@ test infrastructure must never be added to this repository.
   this independent fork as a temporary bridge while upstream experiments with
   a general extension mechanism in Discussion #4258.
 - AppStream records a new r2 release while preserving the historical r1 entry.
-- Remaining hard gates: real Windows Kavita progress/cover acceptance, the full
-  local regression appropriate to this host, one no-Release Actions matrix,
-  and the successful tagged release plus asset/checksum audit.
+- Final local acceptance on 2026-08-24 passed lint (`2045` files), unit tests
+  (`725` files / `9053` tests passed; `4` files / `16` tests skipped), and the
+  Chromium browser suite (`37` files / `360` tests passed; `1` skipped). The
+  browser suite's first run had one loaded-host Worker timeout; that test passed
+  alone in 4.87 seconds and the complete clean rerun then passed.
+- The final Windows debug build completed after embedding the r2 resources and
+  the timestamp fix. Remaining hard gates are one no-Release Actions matrix at
+  the final commit and the successful tagged release plus asset/checksum audit.
 
 ### Upgrade-time Chinese catalogue refresh — Windows runtime accepted
 
