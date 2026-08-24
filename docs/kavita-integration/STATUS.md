@@ -102,11 +102,15 @@ test infrastructure must never be added to this repository.
   the timestamp fix. Remaining hard gates are one no-Release Actions matrix at
   the final commit and the successful tagged release plus asset/checksum audit.
 - The first hosted no-Release matrix (`32703984828`, commit `15b2e8f88`)
-  confirmed metadata, Web packaging, lint, unit, browser, KOReader and browser
-  extension gates before exposing one release-identity omission: the committed
-  Calibre `PLUGIN_VERSION` still ended in revision `1`. It now ends in `2`,
-  matches the app's `0.12.1-r2` version, and all `113` Calibre tests pass
-  locally. A replacement full matrix remains mandatory before tagging.
+  confirmed Web packaging, lint, unit, browser, KOReader, extension, Tauri,
+  Android, iOS, macOS and both Windows builds. It exposed two release-gate
+  defects before tagging: the committed Calibre `PLUGIN_VERSION` still ended
+  in revision `1`, and both successfully built Linux packages were rejected by
+  a `dpkg-deb | grep -q` pipe race under `pipefail`. The plugin now matches the
+  app's `0.12.1-r2` revision and all `113` Calibre tests pass locally; Linux
+  inspection now materializes the complete package listing before checking its
+  desktop and icon entries. Local `actionlint` accepts the corrected workflow.
+  A replacement full matrix remains mandatory before tagging.
 
 ### Upgrade-time Chinese catalogue refresh — Windows runtime accepted
 
