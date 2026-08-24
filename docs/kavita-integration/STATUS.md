@@ -111,6 +111,14 @@ test infrastructure must never be added to this repository.
   inspection now materializes the complete package listing before checking its
   desktop and icon entries. Local `actionlint` accepts the corrected workflow.
   A replacement full matrix remains mandatory before tagging.
+- The replacement matrix (`32707954543`, commit `8cca7f31c`) passed every Web,
+  Tauri, Android, iOS, macOS and Windows x64/arm64 job, including the corrected
+  Calibre gate. Both Linux architectures again built their AppImage and deb,
+  but the remaining regular-expression check still rejected `dpkg-deb -c`'s
+  presentation. Linux verification now extracts the deb and checks the actual
+  non-empty desktop and PNG/SVG files under `usr/share`; this preserves the
+  icon gate while removing the package-listing format dependency. A further
+  complete no-Release matrix is required to prove this final workflow change.
 
 ### Upgrade-time Chinese catalogue refresh — Windows runtime accepted
 
