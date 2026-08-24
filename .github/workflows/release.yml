@@ -309,8 +309,10 @@ jobs:
           deb=$(find "$root/deb" -maxdepth 1 -type f -name '*.deb' -print -quit)
           test -n "$appimage" && test -n "$deb"
           test "$(dpkg-deb -f "$deb" Version)" = "$version"
-          dpkg-deb -c "$deb" | grep -Eq '/usr/share/applications/.+\.desktop$'
-          dpkg-deb -c "$deb" | grep -Eq '/usr/share/icons/.+\.(png|svg)$'
+          deb_contents="$RUNNER_TEMP/readest-remote-${{ matrix.arch }}-deb-contents.txt"
+          dpkg-deb -c "$deb" > "$deb_contents"
+          grep -Eq '/usr/share/applications/.+\.desktop$' "$deb_contents"
+          grep -Eq '/usr/share/icons/.+\.(png|svg)$' "$deb_contents"
           mkdir -p release
           cp "$appimage" "release/Readest-Remote_${version}_linux-${{ matrix.arch }}.AppImage"
           cp "$deb" "release/Readest-Remote_${version}_linux-${{ matrix.arch }}.deb"
