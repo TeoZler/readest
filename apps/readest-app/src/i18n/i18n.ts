@@ -1,15 +1,28 @@
 import i18n from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import translatableLngs from '../../i18n-langs.json';
+import packageJson from '../../package.json';
 import { initReactI18next } from 'react-i18next';
 
 // 'en' is the source language and not listed in the translatable set.
 const SUPPORTED_LNGS = ['en', ...translatableLngs];
 
 const isBrowser = typeof window !== 'undefined';
+const localeAssetVersion = encodeURIComponent(packageJson.version);
 
 const initI18n = async () => {
   if (isBrowser) {
+    // Native builds never install the PWA worker. Remove registrations left by
+    // an older build, and version locale requests so an app upgrade cannot
+    // reuse a stale unversioned catalogue from WebView's HTTP or worker cache.
+    if (process.env['NEXT_PUBLIC_APP_PLATFORM'] === 'tauri' && 'serviceWorker' in navigator) {
+      void navigator.serviceWorker
+        .getRegistrations()
+        .then((registrations) =>
+          Promise.all(registrations.map((registration) => registration.unregister())),
+        )
+        .catch(() => undefined);
+    }
     const HttpApi = (await import('i18next-http-backend')).default;
     i18n.use(HttpApi);
   }
@@ -33,7 +46,11 @@ const initI18n = async () => {
       defaultNS: 'translation',
       ...(isBrowser && {
         backend: {
-          loadPath: '/locales/{{lng}}/{{ns}}.json',
+          loadPath: `/locales/{{lng}}/{{ns}}.json?v=${localeAssetVersion}`,
+          requestOptions: {
+            cache: 'no-store',
+            credentials: 'same-origin',
+          },
         },
       }),
       detection: {

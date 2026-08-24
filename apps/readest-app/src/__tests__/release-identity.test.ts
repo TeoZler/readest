@@ -127,6 +127,14 @@ describe('Readest Remote release identity', () => {
     expect(discord).not.toContain('web.readest.com');
   });
 
+  it('versions locale assets so upgrades cannot retain an r1 catalogue', () => {
+    const i18n = read('src/i18n/i18n.ts');
+    expect(i18n).toContain('packageJson.version');
+    expect(i18n).toContain("cache: 'no-store'");
+    expect(i18n).toContain('.getRegistrations()');
+    expect(i18n).toContain('registration.unregister()');
+  });
+
   it('publishes a distinct Linux desktop identity', () => {
     const appdata = read('../../data/metainfo/appdata.xml');
     expect(appdata).toContain('<id>io.github.wenhe233.readestremote</id>');

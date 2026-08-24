@@ -77,6 +77,17 @@ test infrastructure must never be added to this repository.
   local regression appropriate to this host, one no-Release Actions matrix,
   and the successful tagged release plus asset/checksum audit.
 
+### Upgrade-time Chinese catalogue refresh — implemented; runtime recheck pending
+
+- The first r2 Windows acceptance run found that an existing r1 WebView profile
+  could reuse its unversioned locale response and still show Kavita settings in
+  English even though the packaged r2 JSON was complete.
+- Locale requests now include the public package version and use `no-store`.
+  Native startup also removes any service-worker registrations inherited from
+  older builds; Web/PWA keeps its current worker behavior.
+- The packaged `zh-CN` catalogue was independently confirmed to contain the new
+  values. A rebuilt Windows runtime recheck remains required.
+
 ## Locked baseline
 
 - Readest: `v0.12.1` / `f3e1df7e0572c0119cbb420e1e27ca9af859f91c`
