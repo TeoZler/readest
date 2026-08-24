@@ -36,6 +36,18 @@ test infrastructure must never be added to this repository.
   (`3` files, `14` tests). The 715-book scroll-back network/runtime check remains
   a Windows release gate.
 
+### Kavita shelf badge controls — implemented
+
+- Added independent synced settings for Kavita source and availability/status
+  badges. Both default to enabled, including when an r1 settings row has no new
+  fields, so upgrades preserve the existing shelf appearance.
+- The controls are exposed in Theme → Library and apply to every ordinary shelf
+  card mode; grouped cover previews never rendered these badges and remain
+  unchanged.
+- Verification: TypeScript type check passed; badge combinations and settings
+  backup regression passed (`2` files, `25` tests). Chinese labels are tracked
+  by the r2 localization gate below.
+
 ## Locked baseline
 
 - Readest: `v0.12.1` / `f3e1df7e0572c0119cbb420e1e27ca9af859f91c`

@@ -15,7 +15,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
-import { LibraryCoverFitType, LibraryViewModeType } from '@/types/settings';
+import { LibraryCoverFitType, LibraryViewModeType, SystemSettings } from '@/types/settings';
 import { navigateToLogin } from '@/utils/nav';
 import { isReadestCloudStorageActive } from '@/services/sync/cloudSyncProvider';
 import { isFeedBook } from '@/services/rss/feedBookUrl';
@@ -35,6 +35,30 @@ interface BookItemProps {
   showBookDetailsModal: (book: Book) => void;
   showTimeRemaining: boolean;
 }
+
+export const getKavitaBadgeKeys = (
+  book: Book,
+  settings: Pick<SystemSettings, 'libraryShowKavitaSourceBadge' | 'libraryShowKavitaStatusBadge'>,
+): string[] => {
+  const state = book.kavitaSource?.offlineState;
+  if (!state) return [];
+  const keys: string[] = [];
+  if (settings.libraryShowKavitaSourceBadge !== false) keys.push('Kavita');
+  if (settings.libraryShowKavitaStatusBadge !== false) {
+    keys.push(
+      state === 'offline'
+        ? 'Offline'
+        : state === 'cached'
+          ? 'Cached'
+          : state === 'orphaned'
+            ? 'Server removed'
+            : state === 'downloading'
+              ? 'Downloading'
+              : 'Online',
+    );
+  }
+  return keys;
+};
 
 const BookItem: React.FC<BookItemProps> = ({
   book,
@@ -72,6 +96,7 @@ const BookItem: React.FC<BookItemProps> = ({
 
   const seriesText = formatSeries(book.metadata?.series, book.metadata?.seriesIndex);
   const kavitaState = book.kavitaSource?.offlineState;
+  const kavitaBadgeKeys = getKavitaBadgeKeys(book, settings);
 
   return (
     <div
@@ -106,20 +131,19 @@ const BookItem: React.FC<BookItemProps> = ({
           )}
           onAspectRatioChange={setCoverAspect}
         />
-        {book.kavitaSource && (
+        {kavitaBadgeKeys.length > 0 && (
           <div className='absolute left-1 top-1 flex max-w-[calc(100%-0.5rem)] gap-1'>
-            <span className='badge badge-primary badge-xs shadow'>{_('Kavita')}</span>
-            <span className='badge badge-neutral badge-xs truncate shadow'>
-              {kavitaState === 'offline'
-                ? _('Offline')
-                : kavitaState === 'cached'
-                  ? _('Cached')
-                  : kavitaState === 'orphaned'
-                    ? _('Server removed')
-                    : kavitaState === 'downloading'
-                      ? _('Downloading')
-                      : _('Online')}
-            </span>
+            {kavitaBadgeKeys.map((key, index) => (
+              <span
+                key={key}
+                className={clsx(
+                  'badge badge-xs shadow',
+                  index === 0 && key === 'Kavita' ? 'badge-primary' : 'badge-neutral truncate',
+                )}
+              >
+                {_(key)}
+              </span>
+            ))}
           </div>
         )}
         {bookSelected && (

@@ -4,13 +4,21 @@ import { BoxedList, SettingsSwitchRow } from '../primitives';
 
 interface LibrarySettingsProps {
   skeuomorphicCovers: boolean;
-  onToggle: (enabled: boolean) => void;
+  showKavitaSourceBadge: boolean;
+  showKavitaStatusBadge: boolean;
+  onSkeuomorphicCoversToggle: (enabled: boolean) => void;
+  onKavitaSourceBadgeToggle: (enabled: boolean) => void;
+  onKavitaStatusBadgeToggle: (enabled: boolean) => void;
   'data-setting-id'?: string;
 }
 
 const LibrarySettings: React.FC<LibrarySettingsProps> = ({
   skeuomorphicCovers,
-  onToggle,
+  showKavitaSourceBadge,
+  showKavitaStatusBadge,
+  onSkeuomorphicCoversToggle,
+  onKavitaSourceBadgeToggle,
+  onKavitaStatusBadgeToggle,
   'data-setting-id': dataSettingId,
 }) => {
   const _ = useTranslation();
@@ -20,7 +28,17 @@ const LibrarySettings: React.FC<LibrarySettingsProps> = ({
       <SettingsSwitchRow
         label={_('Skeuomorphic Book Covers')}
         checked={skeuomorphicCovers}
-        onChange={() => onToggle(!skeuomorphicCovers)}
+        onChange={() => onSkeuomorphicCoversToggle(!skeuomorphicCovers)}
+      />
+      <SettingsSwitchRow
+        label={_('Show Kavita Source Badges')}
+        checked={showKavitaSourceBadge}
+        onChange={() => onKavitaSourceBadgeToggle(!showKavitaSourceBadge)}
+      />
+      <SettingsSwitchRow
+        label={_('Show Kavita Status Badges')}
+        checked={showKavitaStatusBadge}
+        onChange={() => onKavitaStatusBadgeToggle(!showKavitaStatusBadge)}
       />
     </BoxedList>
   );

@@ -426,6 +426,10 @@ export interface SystemSettings {
   libraryAutoColumns: boolean;
   libraryColumns: number;
   librarySkeuomorphicCovers: boolean;
+  /** Show the Kavita source badge on Kavita shelf cards. */
+  libraryShowKavitaSourceBadge: boolean;
+  /** Show online/offline/cache status badges on Kavita shelf cards. */
+  libraryShowKavitaStatusBadge: boolean;
   /** Show the recently-read carousel at the top of the library (issue #3797). */
   libraryRecentShelfEnabled: boolean;
   /**

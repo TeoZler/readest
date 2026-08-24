@@ -97,6 +97,12 @@ const ThemePanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset
   const [readingRulerColor, setReadingRulerColor] = useState(viewSettings.readingRulerColor);
 
   const [skeuomorphicCovers, setSkeuomorphicCovers] = useState(settings.librarySkeuomorphicCovers);
+  const [showKavitaSourceBadge, setShowKavitaSourceBadge] = useState(
+    settings.libraryShowKavitaSourceBadge ?? true,
+  );
+  const [showKavitaStatusBadge, setShowKavitaStatusBadge] = useState(
+    settings.libraryShowKavitaStatusBadge ?? true,
+  );
 
   const {
     textures: customTextures,
@@ -296,6 +302,16 @@ const ThemePanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset
     saveSysSettings(envConfig, 'librarySkeuomorphicCovers', skeuomorphicCovers);
   }, [skeuomorphicCovers]);
 
+  useEffect(() => {
+    if (showKavitaSourceBadge === (settings.libraryShowKavitaSourceBadge ?? true)) return;
+    saveSysSettings(envConfig, 'libraryShowKavitaSourceBadge', showKavitaSourceBadge);
+  }, [showKavitaSourceBadge]);
+
+  useEffect(() => {
+    if (showKavitaStatusBadge === (settings.libraryShowKavitaStatusBadge ?? true)) return;
+    saveSysSettings(envConfig, 'libraryShowKavitaStatusBadge', showKavitaStatusBadge);
+  }, [showKavitaStatusBadge]);
+
   const handleSaveCustomTheme = (customTheme: CustomTheme) => {
     applyCustomTheme(customTheme);
     saveCustomTheme(envConfig, settings, customTheme);
@@ -484,7 +500,11 @@ const ThemePanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset
 
           <LibrarySettings
             skeuomorphicCovers={skeuomorphicCovers}
-            onToggle={setSkeuomorphicCovers}
+            showKavitaSourceBadge={showKavitaSourceBadge}
+            showKavitaStatusBadge={showKavitaStatusBadge}
+            onSkeuomorphicCoversToggle={setSkeuomorphicCovers}
+            onKavitaSourceBadgeToggle={setShowKavitaSourceBadge}
+            onKavitaStatusBadgeToggle={setShowKavitaStatusBadge}
             data-setting-id='settings.library.skeuomorphicCovers'
           />
         </>
