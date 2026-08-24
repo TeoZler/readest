@@ -1,29 +1,47 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBookDataStore } from '@/store/bookDataStore';
-import { useBookProgress } from '@/store/readerProgressStore';
+import { getBookProgress, useBookProgress } from '@/store/readerProgressStore';
 import { useReaderStore } from '@/store/readerStore';
 import { debounce } from '@/utils/debounce';
 import { eventDispatcher } from '@/utils/event';
+import { buildSectionFractionTable, getCFIFromXPointer, getXPointerFromCFI } from '@/utils/xcfi';
 import { KavitaClient } from '@/services/kavita/client';
 import { KavitaError } from '@/services/kavita/errors';
 import {
   buildKavitaProgressPayload,
   decideKavitaProgress,
+  fromKavitaBookScrollId,
   getKavitaLocalProgressUpdatedAt,
   getKavitaProgressFraction,
+  hasKavitaReaderProgress,
+  toKavitaBookScrollId,
+  type KavitaResolvedRemoteProgress,
 } from '@/services/kavita/progress';
 import { enqueueKavitaProgress, flushPendingKavitaProgress } from '@/services/kavita/progressQueue';
 import { redactKavitaSecret } from '@/services/kavita/redaction';
 import { getKavitaRuntimeBaseUrl, getKavitaRuntimeConnection } from '@/services/kavita/runtime';
 import { createKavitaTransport } from '@/services/kavita/transport';
-import { getKavitaConnectionRepository } from '@/services/kavita/connections';
-import type { KavitaKoreaderProgress } from '@/services/kavita/types';
-import type { SyncDetails } from './useKOSync';
+import type { KavitaReaderProgressDto } from '@/services/kavita/types';
+import type { SyncDetails, SyncRemotePreview } from './useKOSync';
 import { useWindowActiveChanged } from './useWindowActiveChanged';
 
 type SyncState = 'idle' | 'checking' | 'conflict' | 'synced' | 'error';
 
+interface KavitaConflictRemote extends SyncRemotePreview {
+  dto: KavitaReaderProgressDto;
+  cfi: string | null;
+  fraction: number;
+  approximate: boolean;
+}
+
 const OFFLINE_CATEGORIES = new Set(['network', 'cors', 'tls', 'mixed-content']);
+
+const pageFraction = (pageNum: number, sections: Array<{ size?: number }>): number => {
+  const boundaries = buildSectionFractionTable(sections);
+  if (boundaries.length <= 1) return 0;
+  const index = Math.max(0, Math.min(Math.floor(pageNum), boundaries.length - 2));
+  return boundaries[index] ?? 0;
+};
 
 export const useKavitaProgress = (bookKey: string) => {
   const getBookData = useBookDataStore((state) => state.getBookData);
@@ -32,8 +50,10 @@ export const useKavitaProgress = (bookKey: string) => {
   const progress = useBookProgress(bookKey);
   const source = book?.kavitaSource;
   const [syncState, setSyncState] = useState<SyncState>('idle');
-  const [conflictDetails, setConflictDetails] = useState<SyncDetails | null>(null);
-  const conflictRemoteRef = useRef<KavitaKoreaderProgress | null>(null);
+  const [conflictDetails, setConflictDetails] = useState<SyncDetails<KavitaConflictRemote> | null>(
+    null,
+  );
+  const conflictRemoteRef = useRef<KavitaResolvedRemoteProgress | null>(null);
   const hasPulledOnce = useRef(false);
 
   const runtime = source ? getKavitaRuntimeConnection(source.connectionId) : undefined;
@@ -46,23 +66,12 @@ export const useKavitaProgress = (bookKey: string) => {
     );
   }, [runtime]);
 
-  const deviceId = useMemo(() => {
-    if (!source) return '';
-    const repository = getKavitaConnectionRepository();
-    if (!repository) return '';
-    const device = repository.getDeviceConfig(source.connectionId);
-    if (device.progressDeviceId) return device.progressDeviceId;
-    const id = crypto.randomUUID();
-    repository.saveDeviceConfig({ ...device, progressDeviceId: id });
-    return id;
-  }, [source]);
-
   const queueLocal = useCallback(
-    (payload: KavitaKoreaderProgress, localUpdatedAt: number) => {
+    (payload: KavitaReaderProgressDto, localUpdatedAt: number) => {
       if (!source || typeof localStorage === 'undefined') return;
       enqueueKavitaProgress({
         connectionId: source.connectionId,
-        koreaderHash: source.koreaderHash,
+        chapterId: source.chapterId,
         payload,
         localUpdatedAt,
         queuedAt: Date.now(),
@@ -73,42 +82,81 @@ export const useKavitaProgress = (bookKey: string) => {
 
   const pushCurrent = useCallback(async () => {
     const bookData = getBookData(bookKey);
-    const currentProgress = useReaderStore.getState().getProgress(bookKey);
-    if (!source || !client || !deviceId || !bookData?.book || !currentProgress) return;
+    const currentProgress = getBookProgress(bookKey);
+    if (!source || !client || !bookData?.book || !bookData.bookDoc || !currentProgress) return;
     if (useReaderStore.getState().getViewState(bookKey)?.previewMode) return;
     const localUpdatedAt = Math.max(
       getKavitaLocalProgressUpdatedAt(bookData.config?.progress, bookData.config?.updatedAt),
       Date.now(),
     );
-    const payload = buildKavitaProgressPayload(
-      source.koreaderHash,
-      currentProgress,
-      deviceId,
-      localUpdatedAt,
-    );
     try {
-      await client.putProgress(payload);
-      setSyncState('synced');
-    } catch (error) {
-      if (
-        (error instanceof KavitaError && OFFLINE_CATEGORIES.has(error.category)) ||
-        (typeof navigator !== 'undefined' && !navigator.onLine)
-      ) {
-        queueLocal(payload, localUpdatedAt);
-        return;
+      const pointer = await getXPointerFromCFI(
+        currentProgress.location,
+        currentProgress.range?.startContainer?.ownerDocument ?? undefined,
+        currentProgress.index,
+        bookData.bookDoc,
+      );
+      const bookScrollId = toKavitaBookScrollId(pointer.xpointer);
+      if (!bookScrollId) throw new Error('Failed to convert Readest CFI to Kavita XPath');
+      const payload = buildKavitaProgressPayload(
+        source,
+        currentProgress,
+        bookScrollId,
+        localUpdatedAt,
+      );
+      try {
+        await client.saveReaderProgress(payload);
+        setSyncState('synced');
+      } catch (error) {
+        if (
+          (error instanceof KavitaError && OFFLINE_CATEGORIES.has(error.category)) ||
+          (typeof navigator !== 'undefined' && !navigator.onLine)
+        ) {
+          queueLocal(payload, localUpdatedAt);
+          return;
+        }
+        throw error;
       }
+    } catch (error) {
       setSyncState('error');
       console.warn('Kavita progress sync failed:', redactKavitaSecret(error, runtime?.authKey));
     }
-  }, [bookKey, client, deviceId, getBookData, queueLocal, runtime?.authKey, source]);
+  }, [bookKey, client, getBookData, queueLocal, runtime?.authKey, source]);
 
   const pushDebounced = useMemo(() => debounce(pushCurrent, 5000), [pushCurrent]);
 
-  const applyRemote = useCallback(
-    (remote: KavitaKoreaderProgress) => {
+  const resolveRemote = useCallback(
+    async (dto: KavitaReaderProgressDto): Promise<KavitaResolvedRemoteProgress> => {
+      const bookData = getBookData(bookKey);
       const view = getView(bookKey);
-      if (!view || !Number.isFinite(remote.percentage)) return;
-      view.goToFraction(Math.max(0, Math.min(1, remote.percentage)));
+      const sections = bookData?.bookDoc?.sections ?? [];
+      const fallbackFraction = pageFraction(dto.pageNum, sections);
+      const xpointer = fromKavitaBookScrollId(dto.bookScrollId, dto.pageNum);
+      if (!xpointer || !bookData?.bookDoc || !view) {
+        return { dto, cfi: null, fraction: fallbackFraction, approximate: true };
+      }
+      try {
+        const cfi = await getCFIFromXPointer(xpointer, undefined, undefined, bookData.bookDoc);
+        const converted = await view.getCFIProgress(cfi);
+        if (!converted) throw new Error('Kavita XPath did not resolve to foliate progress');
+        return { dto, cfi, fraction: converted.fraction, approximate: false };
+      } catch (error) {
+        console.warn(
+          'Kavita progress XPath is invalid; using its section start:',
+          redactKavitaSecret(error, runtime?.authKey),
+        );
+        return { dto, cfi: null, fraction: fallbackFraction, approximate: true };
+      }
+    },
+    [bookKey, getBookData, getView, runtime?.authKey],
+  );
+
+  const applyRemote = useCallback(
+    async (remote: KavitaResolvedRemoteProgress) => {
+      const view = getView(bookKey);
+      if (!view) return;
+      if (remote.cfi) await Promise.resolve(view.goTo(remote.cfi));
+      else await Promise.resolve(view.goTo(Math.max(0, remote.dto.pageNum)));
       eventDispatcher.dispatch('hint', { bookKey, message: 'Reading Progress Synced' });
       setSyncState('synced');
       setConflictDetails(null);
@@ -128,15 +176,16 @@ export const useKavitaProgress = (bookKey: string) => {
         await flushPendingKavitaProgress(
           client,
           source.connectionId,
-          source.koreaderHash,
+          source.chapterId,
           localStorage,
         );
       }
-      const remote = await client.getProgress(source.koreaderHash);
-      if (!remote) {
+      const dto = await client.getReaderProgress(source.chapterId);
+      if (!hasKavitaReaderProgress(dto)) {
         setSyncState('synced');
         return;
       }
+      const remote = await resolveRemote(dto);
       const localUpdatedAt = getKavitaLocalProgressUpdatedAt(
         bookData.config?.progress,
         bookData.config?.updatedAt,
@@ -150,7 +199,7 @@ export const useKavitaProgress = (bookKey: string) => {
       if (decision === 'push-local') {
         await pushCurrent();
       } else if (decision === 'apply-remote') {
-        applyRemote(remote);
+        await applyRemote(remote);
       } else if (decision === 'ask') {
         conflictRemoteRef.current = remote;
         setConflictDetails({
@@ -161,8 +210,12 @@ export const useKavitaProgress = (bookKey: string) => {
             preview: `Approximately ${(getKavitaProgressFraction(progress) * 100).toFixed(2)}%`,
           },
           remote: {
-            ...remote,
-            preview: `Approximately ${(remote.percentage * 100).toFixed(2)}%`,
+            dto,
+            cfi: remote.cfi,
+            fraction: remote.fraction,
+            approximate: remote.approximate,
+            device: 'Kavita',
+            preview: `${remote.approximate ? 'Approximate legacy position' : 'Approximately'} ${(remote.fraction * 100).toFixed(2)}%`,
           },
         });
         setSyncState('conflict');
@@ -180,7 +233,18 @@ export const useKavitaProgress = (bookKey: string) => {
       setSyncState('error');
       console.warn('Kavita progress pull failed:', redactKavitaSecret(error, runtime?.authKey));
     }
-  }, [applyRemote, book, bookKey, client, getBookData, progress, pushCurrent, runtime, source]);
+  }, [
+    applyRemote,
+    book,
+    bookKey,
+    client,
+    getBookData,
+    progress,
+    pushCurrent,
+    resolveRemote,
+    runtime,
+    source,
+  ]);
 
   useEffect(() => {
     if (!source || !progress?.location || hasPulledOnce.current) return;
@@ -230,7 +294,7 @@ export const useKavitaProgress = (bookKey: string) => {
     },
     resolveWithRemote: () => {
       const remote = conflictRemoteRef.current;
-      if (remote) applyRemote(remote);
+      if (remote) void applyRemote(remote);
     },
   };
 };

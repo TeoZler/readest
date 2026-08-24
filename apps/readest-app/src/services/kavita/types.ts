@@ -48,6 +48,8 @@ export interface KavitaBookSource {
   volumeId: number;
   chapterId: number;
   fileId: number;
+  /** Kavita's EPUB spine/page count. Optional for rows created by r1. */
+  filePages?: number;
   fileBytes: number;
   fileCreated: string;
   fileExtension: string;
@@ -152,19 +154,22 @@ export interface KavitaSeriesPage {
   pagination: KavitaPagination;
 }
 
-export interface KavitaKoreaderProgress {
-  document: string;
-  device_id: string;
-  device: string;
-  percentage: number;
-  progress: string;
-  timestamp: number;
+export interface KavitaReaderProgressDto {
+  volumeId: number;
+  chapterId: number;
+  /** Zero-based EPUB spine/page index in Kavita. */
+  pageNum: number;
+  seriesId: number;
+  libraryId: number;
+  /** Kavita-scoped XPath such as `//body/p[3]`; null is a legacy coarse position. */
+  bookScrollId: string | null;
+  lastModifiedUtc: string;
 }
 
 export interface KavitaPendingProgress {
   connectionId: string;
-  koreaderHash: string;
-  payload: KavitaKoreaderProgress;
+  chapterId: number;
+  payload: KavitaReaderProgressDto;
   localUpdatedAt: number;
   queuedAt: number;
 }

@@ -4,6 +4,24 @@ This document is the execution log for the Kavita V1 integration. It records
 hard gates, reproducible checks, and known blockers. Secrets and local Kavita
 test infrastructure must never be added to this repository.
 
+## 0.12.1-r2 corrective work
+
+### Native Reader progress — implemented, runtime acceptance pending
+
+- Replaced the Readest-owned KOReader progress route with Kavita's native
+  `GET /api/Reader/get-progress` and `POST /api/Reader/progress` endpoints.
+- Readest now maps foliate CFI to Kavita's `//body/...` element XPath and back,
+  compares conflicts in foliate's weighted fraction domain, and uses the
+  actual zero-based spine index for `pageNum`.
+- Page-only legacy progress is marked approximate and cannot silently replace
+  a meaningful local CFI. The incompatible r1 offline KOReader queue is
+  discarded rather than replayed.
+- `KavitaBookSource.filePages` is populated during catalog mapping and remains
+  optional for r1 rows until their next refresh.
+- Verification: TypeScript type check passed; targeted client/mapper/progress
+  suites passed (`3` files, `18` tests). Real Auth Key GET/POST and Windows
+  reader round-trip remain release gates.
+
 ## Locked baseline
 
 - Readest: `v0.12.1` / `f3e1df7e0572c0119cbb420e1e27ca9af859f91c`

@@ -1,16 +1,32 @@
 import type { KavitaClient } from './client';
+import { getKavitaRemoteProgressUpdatedAt } from './progress';
 import type { KavitaPendingProgress } from './types';
 
-const QUEUE_KEY = 'readest_kavita_progress_queue_v1';
+const LEGACY_QUEUE_KEY = 'readest_kavita_progress_queue_v1';
+const QUEUE_KEY = 'readest_kavita_progress_queue_v2';
 
-const queueId = (item: Pick<KavitaPendingProgress, 'connectionId' | 'koreaderHash'>): string =>
-  `${item.connectionId}:${item.koreaderHash}`;
+const queueId = (item: Pick<KavitaPendingProgress, 'connectionId' | 'chapterId'>): string =>
+  `${item.connectionId}:${item.chapterId}`;
+
+export function discardLegacyKavitaProgressQueue(storage: Storage = localStorage): boolean {
+  if (storage.getItem(LEGACY_QUEUE_KEY) === null) return false;
+  storage.removeItem(LEGACY_QUEUE_KEY);
+  return true;
+}
 
 export function listPendingKavitaProgress(
   storage: Storage = localStorage,
 ): KavitaPendingProgress[] {
+  discardLegacyKavitaProgressQueue(storage);
   try {
-    return JSON.parse(storage.getItem(QUEUE_KEY) ?? '[]') as KavitaPendingProgress[];
+    const parsed = JSON.parse(storage.getItem(QUEUE_KEY) ?? '[]') as KavitaPendingProgress[];
+    return parsed.filter(
+      (item) =>
+        typeof item?.connectionId === 'string' &&
+        Number.isInteger(item?.chapterId) &&
+        item.chapterId > 0 &&
+        item.payload?.chapterId === item.chapterId,
+    );
   } catch {
     return [];
   }
@@ -33,39 +49,34 @@ export function enqueueKavitaProgress(
 
 export function removePendingKavitaProgress(
   connectionId: string,
-  koreaderHash: string,
+  chapterId: number,
   storage: Storage = localStorage,
 ): void {
   savePendingKavitaProgress(
     listPendingKavitaProgress(storage).filter(
-      (candidate) =>
-        candidate.connectionId !== connectionId || candidate.koreaderHash !== koreaderHash,
+      (candidate) => candidate.connectionId !== connectionId || candidate.chapterId !== chapterId,
     ),
     storage,
   );
 }
 
-/**
- * Flush one book after reconnect. A newer server timestamp always wins, so a
- * stale offline device can never overwrite progress made elsewhere.
- */
+/** Flush one book without overwriting progress written by another device. */
 export async function flushPendingKavitaProgress(
   client: KavitaClient,
   connectionId: string,
-  koreaderHash: string,
+  chapterId: number,
   storage: Storage = localStorage,
 ): Promise<'none' | 'pushed' | 'remote-newer'> {
   const pending = listPendingKavitaProgress(storage).find(
-    (candidate) =>
-      candidate.connectionId === connectionId && candidate.koreaderHash === koreaderHash,
+    (candidate) => candidate.connectionId === connectionId && candidate.chapterId === chapterId,
   );
   if (!pending) return 'none';
-  const remote = await client.getProgress(koreaderHash);
-  if ((remote?.timestamp ?? 0) * 1000 > pending.localUpdatedAt) {
-    removePendingKavitaProgress(connectionId, koreaderHash, storage);
+  const remote = await client.getReaderProgress(chapterId);
+  if (getKavitaRemoteProgressUpdatedAt(remote) > pending.localUpdatedAt) {
+    removePendingKavitaProgress(connectionId, chapterId, storage);
     return 'remote-newer';
   }
-  await client.putProgress(pending.payload);
-  removePendingKavitaProgress(connectionId, koreaderHash, storage);
+  await client.saveReaderProgress(pending.payload);
+  removePendingKavitaProgress(connectionId, chapterId, storage);
   return 'pushed';
 }

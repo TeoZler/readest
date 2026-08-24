@@ -5,7 +5,7 @@ import { normalizeKavitaBaseUrl } from './security';
 import type { KavitaTransport } from './transport';
 import { createKavitaTransport } from './transport';
 import type {
-  KavitaKoreaderProgress,
+  KavitaReaderProgressDto,
   KavitaLibraryDto,
   KavitaPagination,
   KavitaPluginAuthenticationDto,
@@ -208,27 +208,32 @@ export class KavitaClient {
     }
   }
 
-  async getProgress(
-    koreaderHash: string,
+  async getReaderProgress(
+    chapterId: number,
     signal?: AbortSignal,
-  ): Promise<KavitaKoreaderProgress | null> {
-    const path = `/api/Koreader/${encodeURIComponent(this.authKey)}/syncs/progress/${encodeURIComponent(koreaderHash)}`;
+  ): Promise<KavitaReaderProgressDto> {
+    const path = this.url('/api/Reader/get-progress', { chapterId });
     try {
       return await this.json(path, { context: 'Kavita reading progress', retries: 2, signal });
     } catch (error) {
-      if (error instanceof KavitaError && (error.status === 400 || error.status === 404))
-        return null;
+      if (error instanceof KavitaError && error.status === 404) {
+        return {
+          volumeId: 0,
+          chapterId,
+          pageNum: 0,
+          seriesId: 0,
+          libraryId: 0,
+          bookScrollId: null,
+          lastModifiedUtc: '',
+        };
+      }
       throw error;
     }
   }
 
-  putProgress(
-    progress: KavitaKoreaderProgress,
-    signal?: AbortSignal,
-  ): Promise<{ document: string; timestamp: string }> {
-    const path = `/api/Koreader/${encodeURIComponent(this.authKey)}/syncs/progress`;
-    return this.json(path, {
-      method: 'PUT',
+  async saveReaderProgress(progress: KavitaReaderProgressDto, signal?: AbortSignal): Promise<void> {
+    await this.request('/api/Reader/progress', {
+      method: 'POST',
       context: 'Kavita reading progress',
       signal,
       body: JSON.stringify(progress),

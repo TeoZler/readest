@@ -89,6 +89,7 @@ export function mapKavitaChapterToBook(
     volumeId: volume.id,
     chapterId: chapter.id,
     fileId: file.id,
+    filePages: file.pages,
     fileBytes: file.bytes,
     fileCreated: file.created,
     fileExtension: file.extension ?? '.epub',

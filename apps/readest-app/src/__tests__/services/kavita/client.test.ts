@@ -77,6 +77,34 @@ describe('KavitaClient', () => {
       category: 'range-unsupported',
     });
   });
+
+  it('uses the native Reader progress API with header-only authentication', async () => {
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    const progress = {
+      volumeId: 4,
+      chapterId: 5,
+      pageNum: 7,
+      seriesId: 3,
+      libraryId: 2,
+      bookScrollId: '//body/p[3]',
+      lastModifiedUtc: '2026-08-24T00:00:00.000Z',
+    };
+    const transport: KavitaTransport = async (url, init) => {
+      requests.push({ url, init });
+      return init?.method === 'POST' ? new Response(null, { status: 200 }) : jsonResponse(progress);
+    };
+    const client = new KavitaClient('https://books.example.test', 'top-secret', transport);
+
+    await expect(client.getReaderProgress(5)).resolves.toEqual(progress);
+    await expect(client.saveReaderProgress(progress)).resolves.toBeUndefined();
+
+    expect(requests[0]!.url).toContain('/api/Reader/get-progress?chapterId=5');
+    expect(requests[0]!.url).not.toContain('top-secret');
+    expect(new Headers(requests[0]!.init?.headers).get('x-api-key')).toBe('top-secret');
+    expect(requests[1]!.url).toContain('/api/Reader/progress');
+    expect(requests[1]!.init?.method).toBe('POST');
+    expect(JSON.parse(String(requests[1]!.init?.body))).toEqual(progress);
+  });
 });
 
 describe('Kavita connection diagnostics', () => {

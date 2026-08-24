@@ -47,17 +47,22 @@ export const kosyncProvider: KosyncProgressProvider = {
     settings.kosync.username && settings.kosync.userkey ? settings.kosync : null,
 };
 
-export interface SyncDetails {
+export interface SyncRemotePreview {
+  device?: string;
+  preview: string;
+  percentage?: number;
+}
+
+export interface SyncDetails<
+  TRemote extends SyncRemotePreview = KoSyncProgress & SyncRemotePreview,
+> {
   book: Book;
   bookDoc: BookDoc;
   local: {
     cfi?: string;
     preview: string;
   };
-  remote: KoSyncProgress & {
-    preview: string;
-    percentage?: number;
-  };
+  remote: TRemote;
 }
 
 export const useKOSync = (bookKey: string, provider: KosyncProgressProvider = kosyncProvider) => {
