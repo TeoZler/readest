@@ -31,8 +31,8 @@ android {
         applicationId = "io.github.wenhe233.readestremote"
         minSdk = 26
         targetSdk = 36
-        versionCode = 12001001
-        versionName = "0.12.1-r1"
+        versionCode = 12001002
+        versionName = "0.12.1-r2"
         val storeFlavor = project.findProperty("storeFlavor")?.toString() ?: "foss"
         missingDimensionStrategy("store", storeFlavor)
     }

@@ -924,7 +924,7 @@ export const READEST_PUBLIC_STORAGE_BASE_URL = 'https://storage.readest.com';
 // (e.g. published book covers) are linked through this host.
 export const READEST_PUBLIC_ASSETS_BASE_URL = 'https://assets.readest.com';
 
-export const READEST_OPDS_USER_AGENT = 'Readest-Remote/0.12.1-r1 (OPDS Browser)';
+export const READEST_OPDS_USER_AGENT = 'Readest-Remote/0.12.1-r2 (OPDS Browser)';
 
 export const SYNC_PROGRESS_INTERVAL_SEC = 3;
 export const SYNC_NOTES_INTERVAL_SEC = 5;

@@ -68,6 +68,15 @@
   </supports>
 
   <releases>
+    <release version="0.12.1-r2" date="2026-08-24">
+      <description>
+        <ul>
+          <li>Synchronizes precise reading positions through the Kavita native Reader API.</li>
+          <li>Keeps Kavita shelf covers stable and adds independent source and status badge controls.</li>
+          <li>Restores legacy iOS icon metadata for TrollStore and completes Simplified and Traditional Chinese localization.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.12.1-r1" date="2026-08-19">
       <description>
         <ul>

@@ -20,7 +20,7 @@ const tauri = JSON.parse(read('src-tauri/tauri.conf.json')) as {
 
 describe('Readest Remote release identity', () => {
   it('pins the product, executable, version, and install identifier', () => {
-    expect(appPackage.version).toBe('0.12.1-r1');
+    expect(appPackage.version).toBe('0.12.1-r2');
     expect(tauri.productName).toBe('Readest Remote');
     expect(tauri.mainBinaryName).toBe('readest-remote');
     expect(tauri.identifier).toBe('io.github.wenhe233.readestremote');
@@ -48,8 +48,8 @@ describe('Readest Remote release identity', () => {
     const gradle = read('src-tauri/gen/android/app/build.gradle.kts');
     expect(gradle).toContain('namespace = "io.github.wenhe233.readestremote"');
     expect(gradle).toContain('applicationId = "io.github.wenhe233.readestremote"');
-    expect(gradle).toContain('versionCode = 12001001');
-    expect(gradle).toContain('versionName = "0.12.1-r1"');
+    expect(gradle).toContain('versionCode = 12001002');
+    expect(gradle).toContain('versionName = "0.12.1-r2"');
     expect(gradle).not.toContain('System.getenv("SENTRY_DSN")');
   });
 
@@ -69,12 +69,12 @@ describe('Readest Remote release identity', () => {
     expect(project).not.toContain('DEVELOPMENT_TEAM:');
     expect(widgetInfo).toContain('<string>Readest Remote</string>');
     expect(widgetInfo).toContain('<string>0.12.1</string>');
-    expect(widgetInfo).toContain('<string>12001001</string>');
+    expect(widgetInfo).toContain('<string>12001002</string>');
     expect(safariAuth).toContain('NSString::from_str("readest-remote")');
     expect(safariAuth).not.toContain('NSString::from_str("readest")');
     expect(tauri.bundle.iOS?.developmentTeam).toBeUndefined();
-    expect(tauri.bundle.iOS?.bundleVersion).toBe('12001001');
-    expect(tauri.bundle.macOS?.bundleVersion).toBe('12001001');
+    expect(tauri.bundle.iOS?.bundleVersion).toBe('12001002');
+    expect(tauri.bundle.macOS?.bundleVersion).toBe('12001002');
     expect(bridge).toContain('io.github.wenhe233.readestremote.sync-passphrase');
     expect(bridge).toContain('io.github.wenhe233.readestremote.secure-items');
   });
@@ -83,7 +83,7 @@ describe('Readest Remote release identity', () => {
     const windowsConfig = read('src-tauri/tauri.windows.conf.json');
     expect(tauri.bundle.windows?.nsis?.installerHooks).toBeUndefined();
     expect(windowsConfig).not.toContain('thumbnail');
-    expect(windowsConfig).toContain('"version": "0.12.1-1"');
+    expect(windowsConfig).toContain('"version": "0.12.1-2"');
     expect(read('src/hooks/useAvailablePlans.ts')).toContain(
       'export const PURCHASES_ENABLED = false',
     );
@@ -131,6 +131,6 @@ describe('Readest Remote release identity', () => {
     const appdata = read('../../data/metainfo/appdata.xml');
     expect(appdata).toContain('<id>io.github.wenhe233.readestremote</id>');
     expect(appdata).toContain('<name>Readest Remote</name>');
-    expect(appdata).toContain('<release version="0.12.1-r1"');
+    expect(appdata).toContain('<release version="0.12.1-r2"');
   });
 });

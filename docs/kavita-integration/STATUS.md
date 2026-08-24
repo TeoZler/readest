@@ -64,6 +64,19 @@ test infrastructure must never be added to this repository.
   both Chinese coverage suites passed locally. Windows runtime acceptance and
   the hosted all-platform package matrix remain release gates.
 
+### 0.12.1-r2 release preparation — implemented; final gates pending
+
+- Public release identity is `0.12.1-r2`, Tag `v0.12.1-r2`, Android/Apple
+  build `12001002`, and Windows file version `0.12.1-2`. Internal workspace,
+  crate, import, sync-directory and protocol names remain unchanged.
+- README now describes Kavita native Reader API progress and accurately frames
+  this independent fork as a temporary bridge while upstream experiments with
+  a general extension mechanism in Discussion #4258.
+- AppStream records a new r2 release while preserving the historical r1 entry.
+- Remaining hard gates: real Windows Kavita progress/cover acceptance, the full
+  local regression appropriate to this host, one no-Release Actions matrix,
+  and the successful tagged release plus asset/checksum audit.
+
 ## Locked baseline
 
 - Readest: `v0.12.1` / `f3e1df7e0572c0119cbb420e1e27ca9af859f91c`

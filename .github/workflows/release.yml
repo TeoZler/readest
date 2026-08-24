@@ -472,7 +472,7 @@ jobs:
           test -n "$EXPECTED_CERT_SHA256" || { echo 'Missing ANDROID_RELEASE_CERT_SHA256' >&2; exit 1; }
           for apk in release/*.apk; do
             badging=$($aapt dump badging "$apk")
-            grep -q "package: name='io.github.wenhe233.readestremote' versionCode='12001001' versionName='${{ needs.metadata.outputs.version }}'" <<< "$badging"
+            grep -q "package: name='io.github.wenhe233.readestremote' versionCode='12001002' versionName='${{ needs.metadata.outputs.version }}'" <<< "$badging"
             grep -q "application-label:'Readest Remote'" <<< "$badging"
             grep -q 'application-icon-' <<< "$badging"
             if grep -q 'com.android.vending.BILLING' <<< "$badging"; then
@@ -545,7 +545,7 @@ jobs:
           apple_version="${apple_version%%-*}"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$info")" = 'io.github.wenhe233.readestremote'
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$info")" = "$apple_version"
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$info")" = '12001001'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$info")" = '12001002'
           test -s "$app/Assets.car"
           for icon in \
             AppIcon20x20@2x.png AppIcon20x20@3x.png \
@@ -558,7 +558,10 @@ jobs:
             AppIcon76x76~ipad.png AppIcon76x76@2x~ipad.png \
             AppIcon83.5x83.5@2x~ipad.png; do
             test -s "$app/$icon"
-            ! sips -g hasAlpha "$app/$icon" | grep -q 'yes'
+            if sips -g hasAlpha "$app/$icon" | grep -q 'yes'; then
+              echo "iOS icon contains an unexpected alpha channel: $icon" >&2
+              exit 1
+            fi
           done
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName' "$info")" = 'AppIcon'
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIcons~ipad:CFBundlePrimaryIcon:CFBundleIconName' "$info")" = 'AppIcon'
